@@ -1,0 +1,2 @@
+-- This is a parameterized SQL query where ? will be replaced with actual values
+INSERT INTO books (title, author, genre_id, cell, position) VALUES (?, ?, (SELECT id FROM genres WHERE name = ?), ?, ?);

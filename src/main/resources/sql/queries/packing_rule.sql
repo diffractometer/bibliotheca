@@ -1,4 +1,4 @@
--- organized_unpacking_plan.sql
+-- packing_rule.sql
 
 WITH GenreOrder AS (
     SELECT id, name, ROW_NUMBER() OVER (ORDER BY name) AS genre_order

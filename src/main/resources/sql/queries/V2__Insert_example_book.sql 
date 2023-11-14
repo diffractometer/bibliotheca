@@ -1,0 +1,3 @@
+-- Insert an example book into the 'Books' table
+INSERT INTO books (title, author, genre_id, cell, position) VALUES
+('Rites of Spring', 'Modris Eksteins', (SELECT id FROM genres WHERE name = 'History'), 1, 1);
