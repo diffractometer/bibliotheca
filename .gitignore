@@ -1,0 +1,89 @@
+# IntelliJ
+.idea/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Rails
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/log/*.log
+/tmp
+
+# Spring Boot
+/target/
+*.iml
+.classpath
+.project
+.settings/
+*.bak
+bin/
+tmp/
+work/
+
+# React
+node_modules/
+build/
+
+# Ruby
+*.gem
+*.rbc
+.bundle
+/config/database.yml
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/log/
+/tmp/
+
+# VS Code
+.vscode/
+
+# Build artifacts
+*.o
+*.so
+*.ko
+*.a
+*.dll
+*.exe
+*.pdb
+*.lib
+*.swp
+
+# macOS
+.DS_Store
+
+# Media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.mp3
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.flv
+*.wav
+
+# Other
+*.bak
+*.swp
+*.swo
+*.tmp
+*.temp
+*.old
+*.orig
+*~
+.cache
+*.log
+*.diff
+*.patch
+*.zip
+*.tar
+*.tar.gz
+*.rar
