@@ -55,7 +55,7 @@ for object in $objects; do
     presigned_url=$(generate_presigned_url "$object")
 
     # Send the pre-signed URL to OpenAI for analysis
-#    echo "Analyzing image: $object"
+    echo "Analyzing image: $object"
     analysis_response=$(analyze_image "$presigned_url")
 
     # Extract content from the response
@@ -66,7 +66,4 @@ for object in $objects; do
     # make the name of the csv file include the current date and time, as well as a uuid to make it unique
     # shorten the uuid to 4 characters
     echo -e "$content"
-
-    # Here's a placeholder SQL statement
-    # echo "INSERT INTO books (title, author, genre_id, cell, position) VALUES ('$title', '$author', (SELECT id FROM genres WHERE name = '$genre'), 1, 1);"
 done

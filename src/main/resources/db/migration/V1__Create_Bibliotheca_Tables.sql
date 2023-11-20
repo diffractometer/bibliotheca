@@ -14,11 +14,11 @@ CREATE TABLE Books
     id       UUID PRIMARY KEY      DEFAULT uuid_generate_v4(), -- Unique identifier for each book
     title    VARCHAR(255) NOT NULL,                            -- Title of the book
     author   VARCHAR(255) NOT NULL,                            -- Author of the book
-    genre_id INT REFERENCES Genres (id),                       -- Foreign key to the genre
-    cell     INT          NOT NULL,                            -- Sequential cell number across all shelves
-    position INT          NOT NULL,                            -- Position within a cell (1-8)
+    genre_id INT REFERENCES Genres (id) NULL,                  -- Foreign key to the genre
+    cell     INT          NULL,                                -- Sequential cell number across all shelves
+    position INT          NULL,                                -- Position within a cell (1-X)
     verified BOOLEAN      NOT NULL DEFAULT FALSE               -- Indicates if the book entry has been verified
 );
 
-ALTER TABLE Books ADD CONSTRAINT chk_cell CHECK (cell BETWEEN 1 AND 40);
-ALTER TABLE Books ADD CONSTRAINT chk_position CHECK (position BETWEEN 1 AND 8);
+ALTER TABLE Books ADD CONSTRAINT chk_cell CHECK (cell BETWEEN 1 AND 40); -- Adjust for number of shelves
+ALTER TABLE Books ADD CONSTRAINT chk_position CHECK (position BETWEEN 1 AND 8); -- Adjust for shelf size
