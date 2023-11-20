@@ -25,6 +25,9 @@ while IFS= read -r line; do
         title=$(echo "$line" | cut -d',' -f1)
         author=$(echo "$line" | cut -d',' -f3-)
 
+        # Remove whitespace in front of the author
+        author=$(echo "$author" | sed -e 's/^[[:space:]]*//')
+
         # Escape single quotes in SQL
         title=$(echo "$title" | sed "s/'/''/g")
         author=$(echo "$author" | sed "s/'/''/g")

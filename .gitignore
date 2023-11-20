@@ -89,3 +89,8 @@ build/
 *.rar
 
 src/test/resources/csv/
+
+.gradle/
+gradle/
+build/
+buildSrc/
