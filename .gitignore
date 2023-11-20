@@ -87,3 +87,5 @@ build/
 *.tar
 *.tar.gz
 *.rar
+
+src/test/resources/csv/
