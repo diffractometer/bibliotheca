@@ -10,7 +10,9 @@ data class Book(
     val genreId: Int?,
     val cell: Int?,
     val position: Int?,
-    val verified: Boolean
+    val verified: Boolean,
+    val createdAt: String,
+    val updatedAt: String,
 )
 
 @Serializable
@@ -21,5 +23,7 @@ data class BookWebResponse(
     val genre: String,
     val cell: Int?,
     val position: Int?,
-    val url: String? = null
+    val url: String? = null,
+    val createdAt: String,
+    val updatedAt: String,
 )

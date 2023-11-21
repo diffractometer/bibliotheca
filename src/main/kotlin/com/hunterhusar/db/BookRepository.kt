@@ -24,7 +24,9 @@ class BookRepository(private val connection: Connection) {
                 genreId = resultSet.getInt("genre_id"),
                 cell = resultSet.getInt("cell"),
                 position = resultSet.getInt("position"),
-                verified = resultSet.getBoolean("verified")
+                verified = resultSet.getBoolean("verified"),
+                createdAt = resultSet.getString("created_at"),
+                updatedAt = resultSet.getString("updated_at")
             )
         } else {
             null
@@ -45,7 +47,9 @@ class BookRepository(private val connection: Connection) {
                     genreId = resultSet.getInt("genre_id"),
                     cell = resultSet.getInt("cell"),
                     position = resultSet.getInt("position"),
-                    verified = resultSet.getBoolean("verified")
+                    verified = resultSet.getBoolean("verified"),
+                    createdAt = resultSet.getString("created_at"),
+                    updatedAt = resultSet.getString("updated_at")
                 )
             } else {
                 null

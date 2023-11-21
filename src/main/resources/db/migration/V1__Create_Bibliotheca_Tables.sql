@@ -17,7 +17,9 @@ CREATE TABLE Books
     genre_id INT REFERENCES Genres (id) NULL,                  -- Foreign key to the genre
     cell     INT          NULL,                                -- Sequential cell number across all shelves
     position INT          NULL,                                -- Position within a cell (1-X)
-    verified BOOLEAN      NOT NULL DEFAULT FALSE               -- Indicates if the book entry has been verified
+    verified BOOLEAN      NOT NULL DEFAULT FALSE,              -- Indicates if the book entry has been verified
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),              -- Timestamp of record creation
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE Books ADD CONSTRAINT chk_cell CHECK (cell BETWEEN 1 AND 40); -- Adjust for number of shelves

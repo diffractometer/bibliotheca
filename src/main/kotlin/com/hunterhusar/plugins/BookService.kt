@@ -77,6 +77,8 @@ class BookService(
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${it.id}",
                 cell = it.cell,
                 position = it.position,
+                createdAt = it.createdAt,
+                updatedAt = it.updatedAt,
             )
         }
     }
@@ -93,6 +95,8 @@ class BookService(
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 cell = book.cell,
                 position = book.position,
+                createdAt = book.createdAt,
+                updatedAt = book.updatedAt,
             )
         }
     }

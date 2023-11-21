@@ -1,7 +1,7 @@
 env: development
 
 dbConfig:
-  host: api.wingdingos.com
+  host: db.wingdingos.com
   port: 3306
   user: postgres
   pass: 1234
@@ -11,4 +11,4 @@ serverConfig:
   redirectUrl: /404.html
 
 qrCodeConfig:
-  baseUrl: api.wingdingos.com
+  baseUrl: bibliotheca.wingdingos.com
