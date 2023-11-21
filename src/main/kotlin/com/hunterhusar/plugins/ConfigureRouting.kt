@@ -1,6 +1,6 @@
 package com.hunterhusar.plugins
 
-import com.hunterhusar.models.ApplicationConfig
+import com.hunterhusar.models.BibliothecaConfig
 import com.hunterhusar.plugins.encoders.decodeQRCode
 import com.hunterhusar.plugins.encoders.encodeToString
 import com.hunterhusar.plugins.encoders.generateQRCode
@@ -16,7 +16,7 @@ import java.util.*
 fun Application.configureRouting(
     bookService: BookService,
     client: HttpClient,
-    config: ApplicationConfig,
+    config: BibliothecaConfig,
 ) {
     routing {
         get("/") {

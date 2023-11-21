@@ -1,6 +1,7 @@
 package com.hunterhusar.plugins
 
 import com.hunterhusar.db.BookRepository
+import com.hunterhusar.models.BibliothecaConfig
 import com.hunterhusar.models.BookWebResponse
 import com.hunterhusar.models.GenreResponse
 import com.hunterhusar.models.openai.OpenAIResponse
@@ -16,6 +17,7 @@ import java.util.*
 class BookService(
     private val db: BookRepository,
     private val client: HttpClient,
+    private val config: BibliothecaConfig
 ) {
 
     @OptIn(InternalAPI::class)
@@ -68,11 +70,13 @@ class BookService(
         val genres = db.getGenres().associateBy { it.id }
         book?.let {
             BookWebResponse(
+                id = it.id,
                 title = it.title,
                 author = it.author,
                 genre = genres[it.genreId]?.name ?: "Unknown",
+                url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${it.id}",
                 cell = it.cell,
-                position = it.position
+                position = it.position,
             )
         }
     }
@@ -82,11 +86,13 @@ class BookService(
         val genres = db.getGenres().associateBy { it.id }
         return@withContext books.map { book ->
             BookWebResponse(
+                id = book.id,
                 title = book.title,
                 author = book.author,
                 genre = genres[book.genreId]?.name ?: "Unknown",
+                url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 cell = book.cell,
-                position = book.position
+                position = book.position,
             )
         }
     }

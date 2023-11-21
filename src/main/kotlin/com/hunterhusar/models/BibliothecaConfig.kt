@@ -1,6 +1,6 @@
 package com.hunterhusar.models
 
-data class ApplicationConfig(
+data class BibliothecaConfig(
     val env: String,
     val dbConfig: DatabaseConfig,
     val serverConfig: ServerConfig,

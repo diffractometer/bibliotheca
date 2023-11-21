@@ -15,9 +15,11 @@ data class Book(
 
 @Serializable
 data class BookWebResponse(
+    val id: String,
     val title: String,
     val author: String,
     val genre: String,
     val cell: Int?,
-    val position: Int?
+    val position: Int?,
+    val url: String? = null
 )

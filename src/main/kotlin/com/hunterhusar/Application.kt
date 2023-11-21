@@ -1,7 +1,7 @@
 package com.hunterhusar
 
 import com.hunterhusar.db.BookRepository
-import com.hunterhusar.models.ApplicationConfig
+import com.hunterhusar.models.BibliothecaConfig
 import com.hunterhusar.plugins.BookService
 import com.hunterhusar.plugins.configureRouting
 import com.hunterhusar.plugins.connectToPostgres
@@ -29,7 +29,7 @@ fun Application.module() {
     val config = ConfigLoaderBuilder.default()
         .addResourceSource("/development.yml")
         .build()
-        .loadConfigOrThrow<ApplicationConfig>()
+        .loadConfigOrThrow<BibliothecaConfig>()
     val dbConnection = connectToPostgres()
     val bookRepository = BookRepository(dbConnection)
     val openAIKey = System.getenv("OPENAI_API_KEY")
@@ -39,7 +39,7 @@ fun Application.module() {
             header(HttpHeaders.Authorization, "Bearer $openAIKey")
         }
     }
-    val bookService = BookService(bookRepository, client)
+    val bookService = BookService(bookRepository, client, config)
     configureSerialization()
     configureRouting(bookService, client, config)
 }
