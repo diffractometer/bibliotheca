@@ -1,7 +1,12 @@
 package com.hunterhusar
 
 import com.hunterhusar.db.BookRepository
-import com.hunterhusar.plugins.*
+import com.hunterhusar.models.ApplicationConfig
+import com.hunterhusar.plugins.BookService
+import com.hunterhusar.plugins.configureRouting
+import com.hunterhusar.plugins.connectToPostgres
+import com.sksamuel.hoplite.ConfigLoaderBuilder
+import com.sksamuel.hoplite.addResourceSource
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -13,7 +18,6 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
-import kotlinx.serialization.json.Json
 
 
 fun main() {
@@ -22,6 +26,10 @@ fun main() {
 }
 
 fun Application.module() {
+    val config = ConfigLoaderBuilder.default()
+        .addResourceSource("/development.yml")
+        .build()
+        .loadConfigOrThrow<ApplicationConfig>()
     val dbConnection = connectToPostgres()
     val bookRepository = BookRepository(dbConnection)
     val openAIKey = System.getenv("OPENAI_API_KEY")
@@ -33,7 +41,7 @@ fun Application.module() {
     }
     val bookService = BookService(bookRepository, client)
     configureSerialization()
-    configureRouting(bookService, client)
+    configureRouting(bookService, client, config)
 }
 
 fun Application.configureSerialization() {
@@ -41,3 +49,4 @@ fun Application.configureSerialization() {
         json()
     }
 }
+

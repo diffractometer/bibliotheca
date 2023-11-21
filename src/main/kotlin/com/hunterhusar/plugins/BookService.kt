@@ -1,17 +1,17 @@
 package com.hunterhusar.plugins
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.hunterhusar.db.BookRepository
-import com.hunterhusar.models.Book
 import com.hunterhusar.models.BookWebResponse
+import com.hunterhusar.models.GenreResponse
 import com.hunterhusar.models.openai.OpenAIResponse
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.util.*
-import kotlinx.serialization.Serializable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+import java.util.*
 
 class BookService(
     private val db: BookRepository,
@@ -48,19 +48,32 @@ class BookService(
             val openAIResponse: OpenAIResponse = Json.decodeFromString(responseBody)
             val messageContent = openAIResponse.choices.first().message.content
             val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
-
-            // Validate the received genre
             val validGenres = db.getGenres().map { it.name }.toSet()
+
+            // Find the corresponding Genre object from the database
             if (winnerResponse.genre in validGenres) {
-                println("winnerResponse: ${winnerResponse.genre}")
-                // Find the corresponding Genre object from the database
+                println("Genre: ${winnerResponse.genre}")
                 val genre = db.getGenres().first { it.name == winnerResponse.genre }
                 db.setGenreId(book.id, genre.id)
             } else {
-                println("somethign went wrong with ${winnerResponse}")
                 // Handle the case where the received genre is not in the list
+                println("something went wrong with ${winnerResponse}")
                 // throw IllegalArgumentException("Received genre is not valid: ${winnerResponse}")
             }
+        }
+    }
+
+    suspend fun getBook(bookId: UUID): BookWebResponse? = withContext(Dispatchers.IO) {
+        val book = db.findBookById(bookId)
+        val genres = db.getGenres().associateBy { it.id }
+        book?.let {
+            BookWebResponse(
+                title = it.title,
+                author = it.author,
+                genre = genres[it.genreId]?.name ?: "Unknown",
+                cell = it.cell,
+                position = it.position
+            )
         }
     }
 
@@ -79,12 +92,6 @@ class BookService(
     }
 
     suspend fun listAll() = withContext(Dispatchers.IO) {
-        val books = db.listAll()
-        books
+        db.listAll()
     }
 }
-
-@Serializable
-data class GenreResponse(
-    val genre: String
-)

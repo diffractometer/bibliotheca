@@ -44,4 +44,13 @@ dependencies {
     implementation("io.ktor:ktor-client-serialization-jvm:$ktor_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.0")
 
+    implementation("com.google.zxing:core:3.4.1")
+    implementation("com.google.zxing:javase:3.4.1")
+
+    implementation("com.sksamuel.hoplite:hoplite-core:2.7.5")
+    implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
+
+    implementation("io.ktor:ktor-server-html-builder:$ktor_version")
+
+
 }

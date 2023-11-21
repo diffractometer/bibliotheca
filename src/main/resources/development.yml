@@ -1,0 +1,14 @@
+env: development
+
+dbConfig:
+  host: api.wingdingos.com
+  port: 3306
+  user: postgres
+  pass: 1234
+
+serverConfig:
+  port: 8080
+  redirectUrl: /404.html
+
+qrCodeConfig:
+  baseUrl: api.wingdingos.com

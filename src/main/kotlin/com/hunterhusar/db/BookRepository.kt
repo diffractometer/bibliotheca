@@ -2,12 +2,35 @@ package com.hunterhusar.db
 
 import com.hunterhusar.models.Book
 import com.hunterhusar.models.Genre
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.sql.Connection
 import java.util.*
 
 class BookRepository(private val connection: Connection) {
+
+    suspend fun findBookById(bookId: UUID): Book? = withContext(Dispatchers.IO) {
+        val query = "SELECT * FROM Books WHERE id = ?;"
+        val statement = connection.prepareStatement(query)
+        statement.setObject(1, bookId)
+        val resultSet = statement.executeQuery()
+
+        if (resultSet.next()) {
+            Book(
+                id = resultSet.getString("id"),
+                title = resultSet.getString("title"),
+                author = resultSet.getString("author"),
+                genreId = resultSet.getInt("genre_id"),
+                cell = resultSet.getInt("cell"),
+                position = resultSet.getInt("position"),
+                verified = resultSet.getBoolean("verified")
+            )
+        } else {
+            null
+        }
+    }
+
     suspend fun listAll(): List<Book> = withContext(Dispatchers.IO) {
         val query = loadQueryFromFile("sql/queries/V1__Select_all_books.sql")
         val statement = connection.prepareStatement(query)
