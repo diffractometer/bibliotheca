@@ -71,4 +71,12 @@ VALUES ('Fantasy'),
        ('Social Sciences'),
        ('Parenting & Families'),
        ('Women’s Fiction'),
-       ('Urban Planning');
+       ('Urban Planning'),
+       ('Techno-Thriller'),
+       ('Bibliographical Fiction'),
+       ('Engineering'),
+       ('Unknown'),
+       ('Uncertain'),
+       ('Reference'),
+       ('Refere'),
+       ('Linguistics');

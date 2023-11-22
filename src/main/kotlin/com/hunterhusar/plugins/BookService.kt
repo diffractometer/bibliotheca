@@ -1,16 +1,13 @@
 package com.hunterhusar.plugins
 
 import com.hunterhusar.db.BookRepository
-import com.hunterhusar.models.BibliothecaConfig
-import com.hunterhusar.models.BookWebResponse
-import com.hunterhusar.models.GenreResponse
+import com.hunterhusar.models.*
 import com.hunterhusar.models.openai.OpenAIResponse
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.util.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import java.util.*
 
@@ -20,48 +17,80 @@ class BookService(
     private val config: BibliothecaConfig
 ) {
 
+    fun generatePackingManifest(): ManifestWebResponse = runBlocking {
+        val manifest = db.generatePackingManifest()
+        val books = manifest.map { book ->
+            ManifestItem(
+                id = book.id,
+                title = book.title,
+                author = book.author,
+                genre = book.genre,
+                cell = book.cell,
+                position = book.position,
+            )
+        }
+        return@runBlocking ManifestWebResponse(books = books)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun processGenresInBackground() {
+        GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
+            processGenres() // Call the suspending function to process genres
+        }
+    }
+
     @OptIn(InternalAPI::class)
     suspend fun processGenres() = withContext(Dispatchers.IO) {
         val books = db.listAll()
         val genreList = db.getGenres().joinToString(", ") { it.name }
-        for (book in books) {
-            val requestBody = buildJsonObject {
-                put("model", "gpt-3.5-turbo-1106")
-                putJsonObject("response_format") {
-                    put("type", "json_object")
-                }
-                putJsonArray("messages") {
-                    addJsonObject {
-                        put("role", "system")
-                        put("content", "You are a helpful library assistant designed to output the genre of a book in JSON format. The genre should be one of the following: $genreList. Respond only with the genre of the book.")
-                    }
-                    addJsonObject {
-                        put("role", "user")
-                        put("content", "Given the title and author of this book, determine it's genre: ${book.title} by ${book.author}")
-                    }
-                }
-            }
 
-            val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
-                body = requestBody.toString()
-            }
+        books.forEach { book ->
+            runCatching {
+                val requestBody = buildJsonObject {
+                    put("model", "gpt-3.5-turbo-1106")
+                    putJsonObject("response_format") {
+                        put("type", "json_object")
+                    }
+                    putJsonArray("messages") {
+                        addJsonObject {
+                            put("role", "system")
+                            put("content", "You are a helpful library assistant designed to output the genre of a book in JSON format. The genre should be one of the following: $genreList. Respond only with the genre of the book.")
+                        }
+                        addJsonObject {
+                            put("role", "user")
+                            put("content", "Given the title and author of this book, determine it's genre: ${book.title} by ${book.author}")
+                        }
+                    }
+                }
 
-            val responseBody = response.bodyAsText()
-            val openAIResponse: OpenAIResponse = Json.decodeFromString(responseBody)
-            val messageContent = openAIResponse.choices.first().message.content
-            val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
+                val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
+                    body = requestBody.toString()
+                }
+
+                val responseBody = response.bodyAsText()
+                val openAIResponse: OpenAIResponse = Json.decodeFromString(responseBody)
+                val messageContent = openAIResponse.choices.first().message.content
+                val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
+
+                processGenreResponse(book, winnerResponse)
+            }.onFailure {
+                // Log the error and continue with the next book
+                println("Error processing book ${book.title} by ${book.author}: ${it.message}")
+            }
+        }
+    }
+
+    private suspend fun processGenreResponse(book: Book, winnerResponse: GenreResponse) {
+        if (book.genreId == null) {
             val validGenres = db.getGenres().map { it.name }.toSet()
-
-            // Find the corresponding Genre object from the database
             if (winnerResponse.genre in validGenres) {
-                println("Genre: ${winnerResponse.genre}")
                 val genre = db.getGenres().first { it.name == winnerResponse.genre }
                 db.setGenreId(book.id, genre.id)
             } else {
-                // Handle the case where the received genre is not in the list
-                println("something went wrong with ${winnerResponse}")
-                // throw IllegalArgumentException("Received genre is not valid: ${winnerResponse}")
+                println("Received genre is not in the list: ${winnerResponse.genre}")
             }
+        } else {
+            println("Book ${book.title} by ${book.author} already has a genre assigned.")
         }
     }
 
@@ -75,6 +104,7 @@ class BookService(
                 author = it.author,
                 genre = genres[it.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${it.id}",
+                uri = "/bibliotheca/${it.id}",
                 cell = it.cell,
                 position = it.position,
                 createdAt = it.createdAt,
@@ -93,6 +123,7 @@ class BookService(
                 author = book.author,
                 genre = genres[book.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
+                uri = "/bibliotheca/${book.id}",
                 cell = book.cell,
                 position = book.position,
                 createdAt = book.createdAt,

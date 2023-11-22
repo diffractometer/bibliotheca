@@ -49,7 +49,7 @@ At this point, you will have set up the database schema for `Genres` and `Books`
     │       └── sql
     │           └── queries
     │               ├── V1__Add_books.sql
-    │               └── packing_rule.sql
+    │               └── V1__Generate_packing_manifest.sql
     └── test
         └── resources
             ├── bookshelf_cells

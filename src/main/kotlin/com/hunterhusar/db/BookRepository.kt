@@ -2,6 +2,7 @@ package com.hunterhusar.db
 
 import com.hunterhusar.models.Book
 import com.hunterhusar.models.Genre
+import com.hunterhusar.models.ManifestItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
@@ -10,6 +11,28 @@ import java.util.*
 
 class BookRepository(private val connection: Connection) {
 
+
+    suspend fun generatePackingManifest(): MutableList<ManifestItem> = withContext(Dispatchers.IO) {
+        val query = loadQueryFromFile("sql/queries/V1__Generate_packing_manifest.sql")
+        val statement = connection.prepareStatement(query)
+        val resultSet = statement.executeQuery()
+
+        val books = mutableListOf<ManifestItem>()
+        while (resultSet.next()) {
+            books.add(
+                ManifestItem(
+                    id = resultSet.getString("id"),
+                    title = resultSet.getString("title"),
+                    author = resultSet.getString("author"),
+                    genre = resultSet.getString("genre"),
+                    cell = resultSet.getInt("cell"),
+                    position = resultSet.getInt("position"),
+                )
+            )
+        }
+        books
+    }
+
     suspend fun findBookById(bookId: UUID): Book? = withContext(Dispatchers.IO) {
         val query = "SELECT * FROM Books WHERE id = ?;"
         val statement = connection.prepareStatement(query)
@@ -17,11 +40,12 @@ class BookRepository(private val connection: Connection) {
         val resultSet = statement.executeQuery()
 
         if (resultSet.next()) {
+            val genreId = if (resultSet.getInt("genre_id") == 0) null else resultSet.getInt("genre_id")
             Book(
                 id = resultSet.getString("id"),
                 title = resultSet.getString("title"),
                 author = resultSet.getString("author"),
-                genreId = resultSet.getInt("genre_id"),
+                genreId = genreId,
                 cell = resultSet.getInt("cell"),
                 position = resultSet.getInt("position"),
                 verified = resultSet.getBoolean("verified"),
@@ -40,11 +64,12 @@ class BookRepository(private val connection: Connection) {
 
         generateSequence {
             if (resultSet.next()) {
+                val genreId = if (resultSet.getInt("genre_id") == 0) null else resultSet.getInt("genre_id")
                 Book(
                     id = resultSet.getString("id"),
                     title = resultSet.getString("title"),
                     author = resultSet.getString("author"),
-                    genreId = resultSet.getInt("genre_id"),
+                    genreId = genreId,
                     cell = resultSet.getInt("cell"),
                     position = resultSet.getInt("position"),
                     verified = resultSet.getBoolean("verified"),

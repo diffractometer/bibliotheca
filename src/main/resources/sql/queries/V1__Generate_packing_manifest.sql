@@ -1,4 +1,4 @@
--- packing_rule.sql
+-- V1__Generate_packing_manifest.sql
 
 WITH GenreOrder AS (
     SELECT id, name, ROW_NUMBER() OVER (ORDER BY name) AS genre_order
@@ -31,11 +31,12 @@ WITH GenreOrder AS (
          FROM BooksWithGenreOrder BGO
      )
 SELECT
+    PB.id, -- Include the book ID in the SELECT statement
     PB.title,
     PB.author,
-    (SELECT name FROM Genres WHERE id = PB.genre_id) AS genre_name,
-    PB.cell AS CellNumber,
-    PB.position AS PositionInCell
+    (SELECT name FROM Genres WHERE id = PB.genre_id) AS genre,
+    PB.cell AS cell,
+    PB.position AS position
 FROM
     PackedBooks PB
 ORDER BY
