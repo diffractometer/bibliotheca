@@ -11,6 +11,7 @@ data class Book(
     val cell: Int?,
     val position: Int?,
     val verified: Boolean,
+    val coverImageS3Url: String? = null,
     val createdAt: String,
     val updatedAt: String,
 )
@@ -25,6 +26,7 @@ data class BookWebResponse(
     val position: Int?,
     val url: String? = null,
     val uri: String? = null,
+    val coverImageS3Url: String? = null,
     val createdAt: String,
     val updatedAt: String,
 )
@@ -41,6 +43,7 @@ data class ManifestItem(
     val title: String,
     val author: String,
     val genre: String,
+    val coverImageS3Url: String,
     val cell: Int?,
     val position: Int?,
 )

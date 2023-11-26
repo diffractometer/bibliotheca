@@ -15,17 +15,21 @@ formatted_filename="${filename%.csv}_formatted.csv"
 
 # Read the original CSV line by line and process it
 while IFS= read -r line; do
-    # Extract the title and author fields assuming they are the first two CSV fields
+    # Extract the title, author, and S3 URL fields
     title=$(echo "$line" | cut -d',' -f1)
     author=$(echo "$line" | cut -d',' -f2)
-    # The S3 URL is assumed to be the third field
-    s3_url=$(echo "$line" | cut -d',' -f3)
+    s3_object_location=$(echo "$line" | cut -d',' -f3)
 
-    # Replace any commas within the author field with a pipe
-    author=$(echo "$author" | sed 's/, /|/g')
+    # Check if the author is "null" and handle accordingly
+    if [ "$author" == "null" ]; then
+        author="Unknown Author"
+    else
+        # Replace any commas within the author field with a pipe, if necessary
+        author=$(echo "$author" | sed 's/, /|/g')
+    fi
 
     # Write the formatted line to the new CSV file
-    echo "$title,$author,$s3_url" >> "$formatted_filename"
+    echo "$title,$author,$s3_object_location" >> "$formatted_filename"
 done < "$filename"
 
 echo "The CSV file has been formatted and saved as: $formatted_filename"

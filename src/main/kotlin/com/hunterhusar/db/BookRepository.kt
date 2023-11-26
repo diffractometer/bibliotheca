@@ -27,6 +27,7 @@ class BookRepository(private val connection: Connection) {
                     genre = resultSet.getString("genre"),
                     cell = resultSet.getInt("cell"),
                     position = resultSet.getInt("position"),
+                    coverImageS3Url = resultSet.getString("cover_image_s3_url")
                 )
             )
         }
@@ -49,6 +50,7 @@ class BookRepository(private val connection: Connection) {
                 cell = resultSet.getInt("cell"),
                 position = resultSet.getInt("position"),
                 verified = resultSet.getBoolean("verified"),
+                coverImageS3Url = resultSet.getString("cover_image_s3_url"),
                 createdAt = resultSet.getString("created_at"),
                 updatedAt = resultSet.getString("updated_at")
             )
@@ -73,6 +75,7 @@ class BookRepository(private val connection: Connection) {
                     cell = resultSet.getInt("cell"),
                     position = resultSet.getInt("position"),
                     verified = resultSet.getBoolean("verified"),
+                    coverImageS3Url = resultSet.getString("cover_image_s3_url"),
                     createdAt = resultSet.getString("created_at"),
                     updatedAt = resultSet.getString("updated_at")
                 )

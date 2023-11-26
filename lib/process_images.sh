@@ -54,12 +54,11 @@ analyze_images() {
     # Parse the response and write to CSV
     local books=$(echo "$response" | jq -r '.choices[0].message.content' 2>/dev/null)
     if [[ ! -z "$books" ]]; then
-        while IFS= read -r line; do
-            # Remove quotes and trim leading whitespace from author
-            line=$(echo "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/","/,/g; s/^"//; s/"$//;')
-            # Append the object location to the line and write to CSV
-            echo "$line,$object_path" >> "$csv_filename"
-        done <<< "$books"
+        echo "$books" | awk -v OFS=',' -F',' '{
+            gsub(/^"|"$/, "", $1); # Remove quotes from the first field (title)
+            gsub(/^"|"$/, "", $2); # Remove quotes from the second field (author)
+            print $1, $2, $3     # Print the title, author, and s3_object_location
+        }' >> "$csv_filename"
     fi
 }
 

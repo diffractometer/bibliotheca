@@ -27,6 +27,7 @@ class BookService(
                 genre = book.genre,
                 cell = book.cell,
                 position = book.position,
+                coverImageS3Url = book.coverImageS3Url,
             )
         }
         return@runBlocking ManifestWebResponse(books = books)
@@ -124,6 +125,7 @@ class BookService(
                 genre = genres[book.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 uri = "/bibliotheca/${book.id}",
+                coverImageS3Url = book.coverImageS3Url,
                 cell = book.cell,
                 position = book.position,
                 createdAt = book.createdAt,

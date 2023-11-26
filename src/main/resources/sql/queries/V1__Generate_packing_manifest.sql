@@ -9,6 +9,7 @@ WITH GenreOrder AS (
              B.id,
              B.title,
              B.author,
+             B.cover_image_s3_url, -- Add the S3 URL field here
              B.genre_id,
              GO.genre_order,
              ROW_NUMBER() OVER (PARTITION BY B.genre_id ORDER BY B.author, B.title) AS book_order_within_genre
@@ -20,13 +21,11 @@ WITH GenreOrder AS (
              BGO.id,
              BGO.title,
              BGO.author,
+             BGO.cover_image_s3_url, -- Carry the S3 URL field through to this CTE
              BGO.genre_id,
              BGO.genre_order,
              BGO.book_order_within_genre,
-             -- Calculate the cell based on the genre order and the order of the book within the genre
-             -- Assuming 8 books per cell
              CEILING((CAST(ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) AS DECIMAL)) / 8) AS cell,
-             -- Calculate the position in the cell
              (ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) - 1) % 8 + 1 AS position
          FROM BooksWithGenreOrder BGO
      )
@@ -36,7 +35,8 @@ SELECT
     PB.author,
     (SELECT name FROM Genres WHERE id = PB.genre_id) AS genre,
     PB.cell AS cell,
-    PB.position AS position
+    PB.position AS position,
+    PB.cover_image_s3_url -- Include the S3 URL in the final SELECT
 FROM
     PackedBooks PB
 ORDER BY

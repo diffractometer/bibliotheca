@@ -19,24 +19,24 @@ sql_values=""
 # Read the CSV file and generate SQL INSERT values
 while IFS= read -r line; do
     # Skip the header line
-    if [[ "$line" != "title,author,cover_image_s3_url" ]]; then
+    if [[ "$line" != "title,author,s3_object_location" ]]; then
         # Read the title and author fields from the CSV
         title=$(echo "$line" | cut -d',' -f1)
         author=$(echo "$line" | cut -d',' -f2)
-        # The S3 URL is the third field in the CSV
-        cover_image_s3_url=$(echo "$line" | cut -d',' -f3)
+        # The S3 object location is the third field in the CSV
+        s3_object_location=$(echo "$line" | cut -d',' -f3)
 
-        # Remove whitespace in front of the author and S3 URL
-        author=$(echo "$author" | sed -e 's/^[[:space:]]*//')
-        cover_image_s3_url=$(echo "$cover_image_s3_url" | sed -e 's/^[[:space:]]*//')
+        # Handle null values
+        title=${title:-null}
+        author=${author:-null}
 
         # Escape single quotes in SQL
         title=$(echo "$title" | sed "s/'/''/g")
         author=$(echo "$author" | sed "s/'/''/g")
-        cover_image_s3_url=$(echo "$cover_image_s3_url" | sed "s/'/''/g")
+        s3_object_location=$(echo "$s3_object_location" | sed "s/'/''/g")
 
         # Concatenate to the SQL VALUES list
-        sql_values+="(uuid_generate_v4(), '$title', '$author', FALSE, NOW(), NOW(), '$cover_image_s3_url'),"
+        sql_values+="(uuid_generate_v4(), '$title', '$author', FALSE, NOW(), NOW(), '$s3_object_location'),"
     fi
 done < <(tail -n +2 "$filename")
 

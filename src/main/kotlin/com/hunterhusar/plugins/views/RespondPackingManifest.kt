@@ -64,6 +64,7 @@ suspend fun ApplicationCall.respondPackingManifest(
                     th { +"Genre" }
                     th { +"Bookshelf Cell #" }
                     th { +"Position" }
+                    th { +"Cover Image" }
                 }
                 manifestWebResponse.books.forEach { book ->
                     tr {
@@ -77,6 +78,9 @@ suspend fun ApplicationCall.respondPackingManifest(
                         td { +book.genre }
                         td { +book.cell.toString() }
                         td { +book.position.toString() }
+                        td { // Add a new column for the cover image S3 URL
+                            a(href = book.coverImageS3Url) { + book.coverImageS3Url }
+                        }
                     }
                 }
             }
