@@ -18,6 +18,7 @@ CREATE TABLE Books
     cell     INT          NULL,                                -- Sequential cell number across all shelves
     position INT          NULL,                                -- Position within a cell (1-X)
     verified BOOLEAN      NOT NULL DEFAULT FALSE,              -- Indicates if the book entry has been verified
+    cover_image_s3_url VARCHAR(255) NULL,                      -- URL to the book's cover image stored in S3
     created_at  TIMESTAMP NOT NULL DEFAULT NOW(),              -- Timestamp of record creation
     updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
