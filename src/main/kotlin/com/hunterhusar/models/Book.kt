@@ -2,6 +2,8 @@ package com.hunterhusar.models
 
 import kotlinx.serialization.Serializable
 
+data class ProtoBook(val title: String, val author: String)
+
 @Serializable
 data class Book(
     val id: String,

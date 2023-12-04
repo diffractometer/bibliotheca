@@ -43,5 +43,9 @@ fun Application.configureRouting(
             val manifestWebResponse: ManifestWebResponse = bookService.generatePackingManifest()
             call.respondPackingManifest(manifestWebResponse, config.qrCodeConfig)
         }
+        get("/bibliotheca/processImages") {
+            val processImagesResponse: Unit = bookService.processImagesInBackground()
+            call.respond(HttpStatusCode.OK, "Image processing started..." + "${processImagesResponse}")
+        }
     }
 }

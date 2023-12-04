@@ -5,6 +5,8 @@ data class BibliothecaConfig(
     val dbConfig: DatabaseConfig,
     val serverConfig: ServerConfig,
     val qrCodeConfig: QRCodeConfig,
+    val s3Config: S3Config,
+    val prompt: String
 )
 
 data class DatabaseConfig(
@@ -21,4 +23,10 @@ data class ServerConfig(
 
 data class QRCodeConfig(
     val baseUrl: String,
+)
+
+data class S3Config(
+    val bucketName: String,
+    val region: String,
+    val folder: String
 )

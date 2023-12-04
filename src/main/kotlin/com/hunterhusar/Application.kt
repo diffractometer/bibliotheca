@@ -3,6 +3,7 @@ package com.hunterhusar
 import com.hunterhusar.db.BookRepository
 import com.hunterhusar.models.BibliothecaConfig
 import com.hunterhusar.plugins.BookService
+import com.hunterhusar.plugins.aws.S3
 import com.hunterhusar.plugins.configureRouting
 import com.hunterhusar.plugins.connectToPostgres
 import com.sksamuel.hoplite.ConfigLoaderBuilder
@@ -39,7 +40,8 @@ fun Application.module() {
             header(HttpHeaders.Authorization, "Bearer $openAIKey")
         }
     }
-    val bookService = BookService(bookRepository, client, config)
+    val s3Service = S3(config.s3Config)
+    val bookService = BookService(bookRepository, client, config, s3Service)
     configureSerialization()
     configureRouting(bookService, client, config)
 }

@@ -8,7 +8,7 @@ import kotlinx.html.*
 
 suspend fun ApplicationCall.respondPackingManifest(
     manifestWebResponse: ManifestWebResponse,
-    qrCodeConfig: QRCodeConfig,
+    qrCodeConfig: QRCodeConfig
 ) {
     respondHtml {
         head {
@@ -78,8 +78,8 @@ suspend fun ApplicationCall.respondPackingManifest(
                         td { +book.genre }
                         td { +book.cell.toString() }
                         td { +book.position.toString() }
-                        td { // Add a new column for the cover image S3 URL
-                            a(href = book.coverImageS3Url) { + book.coverImageS3Url }
+                        td {
+                            a(href = book.coverImageS3Url) { +book.coverImageS3Url }
                         }
                     }
                 }

@@ -3,6 +3,10 @@ package com.hunterhusar.plugins
 import com.hunterhusar.db.BookRepository
 import com.hunterhusar.models.*
 import com.hunterhusar.models.openai.OpenAIResponse
+import com.hunterhusar.openai.OpenAIVisionPreviewResponse
+import com.hunterhusar.plugins.aws.S3
+import com.hunterhusar.plugins.aws.createPresignedUrl
+import com.hunterhusar.plugins.aws.listImagesFromBucket
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -14,8 +18,73 @@ import java.util.*
 class BookService(
     private val db: BookRepository,
     private val client: HttpClient,
-    private val config: BibliothecaConfig
+    private val config: BibliothecaConfig,
+    private val s3: S3
 ) {
+
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun processImagesInBackground() {
+        GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
+            processImages() // Call the suspending function to process images
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class, InternalAPI::class)
+    fun processImages() {
+        GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
+            val imageKeys = s3.listImagesFromBucket() // List images from the S3 bucket
+            val signedImageUrls = imageKeys.map { s3.createPresignedUrl(it) }
+
+            // Prepare the OpenAI API call with all signed image URLs
+            val requestBody = buildJsonObject {
+                put("model", "gpt-4-vision-preview")
+                putJsonArray("messages") {
+                    addJsonObject {
+                        put("role", "user")
+                        putJsonArray("content") {
+                            addJsonObject {
+                                put("type", "text")
+                                put("text", config.prompt)
+                            }
+                            // Add all image URLs to the request
+                            signedImageUrls.forEach { imageUrl ->
+                                addJsonObject {
+                                    put("type", "image_url")
+                                    putJsonObject("image_url") {
+                                        put("url", imageUrl)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                put("max_tokens", 300)
+            }
+
+            val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
+                body = requestBody.toString()
+            }
+
+            val responseBody = response.bodyAsText()
+            val openAIResponse: OpenAIVisionPreviewResponse = Json.decodeFromString(responseBody)
+            val messageContent = openAIResponse.choices.first().message.content
+
+            val protoBooks = messageContent
+                .lineSequence() // Convert to a sequence of lines
+                .mapNotNull { line ->
+                    line.takeIf { !it.contains("null") } // Filter out lines with 'null'
+                }
+                .map { entry ->
+                    val (title, author) = entry.split(",", limit = 2).map { it.trim('"', ' ').trim() }
+                    ProtoBook(title, author)
+                }
+                .toList() // Convert back to a list
+
+            println("protoBooks: $protoBooks")
+            db.insertBooks(protoBooks)
+        }
+    }
 
     fun generatePackingManifest(): ManifestWebResponse = runBlocking {
         val manifest = db.generatePackingManifest()
@@ -27,7 +96,7 @@ class BookService(
                 genre = book.genre,
                 cell = book.cell,
                 position = book.position,
-                coverImageS3Url = book.coverImageS3Url,
+                coverImageS3Url = s3.createPresignedUrl(book.coverImageS3Url),
             )
         }
         return@runBlocking ManifestWebResponse(books = books)
@@ -138,3 +207,6 @@ class BookService(
         db.listAll()
     }
 }
+
+
+

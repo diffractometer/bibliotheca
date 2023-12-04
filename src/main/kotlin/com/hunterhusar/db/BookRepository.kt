@@ -3,6 +3,7 @@ package com.hunterhusar.db
 import com.hunterhusar.models.Book
 import com.hunterhusar.models.Genre
 import com.hunterhusar.models.ManifestItem
+import com.hunterhusar.models.ProtoBook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
@@ -10,7 +11,6 @@ import java.sql.Connection
 import java.util.*
 
 class BookRepository(private val connection: Connection) {
-
 
     suspend fun generatePackingManifest(): MutableList<ManifestItem> = withContext(Dispatchers.IO) {
         val query = loadQueryFromFile("sql/queries/V1__Generate_packing_manifest.sql")
@@ -32,6 +32,37 @@ class BookRepository(private val connection: Connection) {
             )
         }
         books
+    }
+
+    suspend fun insertBooks(books: List<ProtoBook>) = withContext(Dispatchers.IO) {
+        books.forEach { insertBook(it) }
+    }
+
+    suspend fun insertBook(book: ProtoBook): Result<UUID?> = withContext(Dispatchers.IO) {
+        runCatching {
+            // Check if a book with the same title already exists
+            val checkQuery = "SELECT id FROM Books WHERE title = ?;"
+            val checkStatement = connection.prepareStatement(checkQuery).apply {
+                setString(1, book.title)
+            }
+            val resultSet = checkStatement.executeQuery()
+
+            // If a book with the same title exists, return its id instead of creating a new one
+            if (resultSet.next()) {
+                UUID.fromString(resultSet.getString("id"))
+            } else {
+                // Insert the new book
+                val insertQuery = "INSERT INTO Books (id, title, author) VALUES (?, ?, ?);"
+                val bookId = UUID.randomUUID()
+                val insertStatement = connection.prepareStatement(insertQuery).apply {
+                    setObject(1, bookId)
+                    setString(2, book.title)
+                    setString(3, book.author)
+                }
+                insertStatement.executeUpdate()
+                bookId
+            }
+        }
     }
 
     suspend fun findBookById(bookId: UUID): Book? = withContext(Dispatchers.IO) {

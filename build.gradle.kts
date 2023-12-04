@@ -51,6 +51,7 @@ dependencies {
     implementation("com.sksamuel.hoplite:hoplite-yaml:2.7.5")
 
     implementation("io.ktor:ktor-server-html-builder:$ktor_version")
+    implementation("software.amazon.awssdk:s3:2.21.29")
 
 
 }
