@@ -32,64 +32,72 @@ class BookService(
 
     @OptIn(DelicateCoroutinesApi::class, InternalAPI::class)
     fun processImages() {
-        GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
-            val imageKeys = s3.listImagesFromBucket() // List images from the S3 bucket
-
-            val unprocessedImageKeys = db.getUnprocessedImageKeys(imageKeys)
-
+        GlobalScope.launch(Dispatchers.IO) {
+            val unprocessedImageKeys = fetchUnprocessedImageKeys()
             unprocessedImageKeys.chunked(10).forEach { batch ->
-                val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
+                processBatch(batch)
+            }
+        }
+    }
 
-                // Prepare the OpenAI API call with all signed image URLs
-                val requestBody = buildJsonObject {
-                    put("model", "gpt-4-vision-preview")
-                    putJsonArray("messages") {
+    private suspend fun fetchUnprocessedImageKeys(): List<String> {
+        val imageKeys = s3.listImagesFromBucket()
+        return db.getUnprocessedImageKeys(imageKeys)
+    }
+
+    private suspend fun processBatch(batch: List<String>) {
+        val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
+        val requestBody = buildRequestBody(signedImageUrls)
+        val response = sendApiRequest(requestBody)
+        val protoBooks = parseResponse(response)
+        println("protoBooks: $protoBooks")
+        db.insertBooks(protoBooks)
+    }
+
+    private fun buildRequestBody(signedImageUrls: List<String>): JsonObject {
+        return buildJsonObject {
+            put("model", "gpt-4-vision-preview")
+            putJsonArray("messages") {
+                addJsonObject {
+                    put("role", "user")
+                    putJsonArray("content") {
                         addJsonObject {
-                            put("role", "user")
-                            putJsonArray("content") {
-                                addJsonObject {
-                                    put("type", "text")
-                                    put("text", config.prompt)
-                                }
-                                // Add all image URLs to the request
-                                signedImageUrls.forEach { imageUrl ->
-                                    addJsonObject {
-                                        put("type", "image_url")
-                                        putJsonObject("image_url") {
-                                            put("url", imageUrl)
-                                        }
-                                    }
+                            put("type", "text")
+                            put("text", config.prompt)
+                        }
+                        signedImageUrls.forEach { imageUrl ->
+                            addJsonObject {
+                                put("type", "image_url")
+                                putJsonObject("image_url") {
+                                    put("url", imageUrl)
                                 }
                             }
                         }
                     }
-                    put("max_tokens", 300)
                 }
-
-                val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
-                    body = requestBody.toString()
-                }
-
-                val responseBody = response.bodyAsText()
-                val json = Json { ignoreUnknownKeys = true } // Custom Json configuration
-                val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
-                val messageContent = openAIResponse.choices.first().message.content
-
-                val protoBooks = messageContent
-                    .lineSequence() // Convert to a sequence of lines
-                    .mapNotNull { line ->
-                        line.takeIf { !it.contains("null") } // Filter out lines with 'null'
-                    }
-                    .map { entry ->
-                        val (title, author) = entry.split(",", limit = 2).map { it.trim('"', ' ').trim() }
-                        ProtoBook(title, author)
-                    }
-                    .toList() // Convert back to a list
-
-                println("protoBooks: $protoBooks")
-                db.insertBooks(protoBooks)
             }
+            put("max_tokens", 300)
         }
+    }
+
+    @OptIn(InternalAPI::class)
+    private suspend fun sendApiRequest(requestBody: JsonObject): String {
+        val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
+            body = requestBody.toString()
+        }
+        return response.bodyAsText()
+    }
+
+    private fun parseResponse(responseBody: String): List<ProtoBook> {
+        val json = Json { ignoreUnknownKeys = true }
+        val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
+        val messageContent = openAIResponse.choices.first().message.content
+        return messageContent.lineSequence()
+            .mapNotNull { line -> line.takeIf { !it.contains("null") } }
+            .map { entry ->
+                val (title, author) = entry.split(",", limit = 2).map { it.trim('"', ' ').trim() }
+                ProtoBook(title, author)
+            }.toList()
     }
 
     fun generatePackingManifest(): ManifestWebResponse = runBlocking {

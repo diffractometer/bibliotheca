@@ -2,7 +2,11 @@ package com.hunterhusar.models
 
 import kotlinx.serialization.Serializable
 
-data class ProtoBook(val title: String, val author: String)
+data class ProtoBook(
+    val title: String,
+    val author: String,
+    val imageLocation: String? = null
+)
 
 @Serializable
 data class Book(

@@ -39,6 +39,9 @@ fun Application.module() {
             header(HttpHeaders.ContentType, Json)
             header(HttpHeaders.Authorization, "Bearer $openAIKey")
         }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 60_000
+        }
     }
     val s3Service = S3(config.s3Config)
     val bookService = BookService(bookRepository, client, config, s3Service)
