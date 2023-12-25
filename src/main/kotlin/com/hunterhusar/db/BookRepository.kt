@@ -15,6 +15,7 @@ class BookRepository(private val connection: Connection) {
     suspend fun getUnprocessedImageKeys(allImageKeys: List<String>): List<String> = withContext(Dispatchers.IO) {
         // Get all processed image keys in one query
         val processedKeysSet = mutableSetOf<String>()
+        // make book query?
         val query = loadQueryFromFile("sql/queries/V1__SelectProcessedImageKeys.sql")
 
         val statement = connection.prepareStatement(query).apply {

@@ -21,8 +21,6 @@ class BookService(
     private val config: BibliothecaConfig,
     private val s3: S3
 ) {
-
-
     @OptIn(DelicateCoroutinesApi::class)
     fun processImagesInBackground() {
         GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
@@ -34,7 +32,8 @@ class BookService(
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
-            unprocessedImageKeys.chunked(10).forEach { batch ->
+            println("unprocessedImageKeys: $unprocessedImageKeys")
+            unprocessedImageKeys.chunked(20).forEach { batch ->
                 processBatch(batch)
             }
         }
@@ -46,20 +45,24 @@ class BookService(
     }
 
     private suspend fun processBatch(batch: List<String>) {
+        var isTestMode = true
+
         val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
         val requestBody = buildRequestBody(signedImageUrls)
-        val response = sendApiRequest(requestBody)
 
-        val protoBooks: List<ProtoBook> = parseResponse(response)
-
-        // Combining the protoBooks with the original image keys
-        val updatedProtoBooks = protoBooks.zip(batch) { protoBook, imageKey ->
-            protoBook.copy(coverImageS3Url = imageKey) // Assuming ProtoBook has a copy method
+        if (isTestMode) {
+            // If in test mode, print the request body instead of sending it
+            println("Request Body for testing: $requestBody")
+        } else {
+            // If not in test mode, send the actual request
+            val response = sendApiRequest(requestBody)
+            val protoBooks: List<ProtoBook> = parseResponse(response)
+            val updatedProtoBooks = protoBooks.zip(batch) { protoBook, imageKey ->
+                protoBook.copy(coverImageS3Url = imageKey) // Modify as per your structure
+            }
+            println("updatedProtoBooks: $updatedProtoBooks")
+            db.insertBooks(updatedProtoBooks)
         }
-
-        println("updatedProtoBooks: $updatedProtoBooks")
-
-        db.insertBooks(updatedProtoBooks)
     }
 
     private fun buildRequestBody(signedImageUrls: List<String>): JsonObject {
