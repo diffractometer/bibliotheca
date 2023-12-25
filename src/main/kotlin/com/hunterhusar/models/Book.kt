@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 data class ProtoBook(
     val title: String,
     val author: String,
-    val imageLocation: String? = null
+    val coverImageS3Url: String? = null,
 )
 
 @Serializable

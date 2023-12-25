@@ -71,12 +71,13 @@ class BookRepository(private val connection: Connection) {
                 UUID.fromString(resultSet.getString("id"))
             } else {
                 // Insert the new book
-                val insertQuery = "INSERT INTO Books (id, title, author) VALUES (?, ?, ?);"
+                val insertQuery = "INSERT INTO Books (id, title, author, cover_image_s3_url) VALUES (?, ?, ?, ?);"
                 val bookId = UUID.randomUUID()
                 val insertStatement = connection.prepareStatement(insertQuery).apply {
                     setObject(1, bookId)
                     setString(2, book.title)
                     setString(3, book.author)
+                    setString(4, book.coverImageS3Url)
                 }
                 insertStatement.executeUpdate()
                 bookId

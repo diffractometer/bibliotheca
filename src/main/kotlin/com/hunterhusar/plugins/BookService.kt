@@ -49,9 +49,17 @@ class BookService(
         val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
         val requestBody = buildRequestBody(signedImageUrls)
         val response = sendApiRequest(requestBody)
-        val protoBooks = parseResponse(response)
-        println("protoBooks: $protoBooks")
-        db.insertBooks(protoBooks)
+
+        val protoBooks: List<ProtoBook> = parseResponse(response)
+
+        // Combining the protoBooks with the original image keys
+        val updatedProtoBooks = protoBooks.zip(batch) { protoBook, imageKey ->
+            protoBook.copy(coverImageS3Url = imageKey) // Assuming ProtoBook has a copy method
+        }
+
+        println("updatedProtoBooks: $updatedProtoBooks")
+
+        db.insertBooks(updatedProtoBooks)
     }
 
     private fun buildRequestBody(signedImageUrls: List<String>): JsonObject {
