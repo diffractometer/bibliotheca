@@ -12,6 +12,25 @@ import java.util.*
 
 class BookRepository(private val connection: Connection) {
 
+    suspend fun getUnprocessedImageKeys(allImageKeys: List<String>): List<String> = withContext(Dispatchers.IO) {
+        // Get all processed image keys in one query
+        val processedKeysSet = mutableSetOf<String>()
+        val query = loadQueryFromFile("sql/queries/V1__SelectProcessedImageKeys.sql")
+
+        val statement = connection.prepareStatement(query).apply {
+            val array = connection.createArrayOf("VARCHAR", allImageKeys.toTypedArray())
+            setArray(1, array)
+        }
+
+        val resultSet = statement.executeQuery()
+        while (resultSet.next()) {
+            processedKeysSet.add(resultSet.getString("image_key"))
+        }
+
+        // Return the list of keys that are not in the processedKeysSet
+        allImageKeys.filter { it !in processedKeysSet }
+    }
+
     suspend fun generatePackingManifest(): MutableList<ManifestItem> = withContext(Dispatchers.IO) {
         val query = loadQueryFromFile("sql/queries/V1__Generate_packing_manifest.sql")
         val statement = connection.prepareStatement(query)

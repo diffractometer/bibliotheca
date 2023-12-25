@@ -1,14 +1,17 @@
 # Bibliotheca
 
+# Hunter and Simone's books!
+
 ## PostgreSQL Commands
+
 ```sql
 DROP DATABASE IF EXISTS bibliotheca_development;
 CREATE DATABASE bibliotheca_development;
 ```
 
 ## Docker Commands
-- Start container: `docker-compose up -d`
-- Connect: `docker exec -it bibliotheca_db psql -U postgres -d bibliotheca_development`
+- Start database container: `docker-compose up -d` 
+- Connect to the docker database: `docker exec -it bibliotheca_db psql -U postgres -d bibliotheca_development`
 
 ## Seed Data
 Run the scripts in the following order to seed the database:
@@ -19,6 +22,7 @@ Run the scripts in the following order to seed the database:
 ## Make your DB
 Run the scripts in the following order to build the insert statements
 ```
+./lib/resize_images.sh
 ./lib/process_images.sh
 ./lib/format_csv.sh
 ./lib/build_inserts.sh

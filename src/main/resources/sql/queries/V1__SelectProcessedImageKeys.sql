@@ -1,0 +1,1 @@
+SELECT image_key FROM processedimages WHERE image_key = ANY(?);

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class Choice(
     val index: Int,
     val message: Message,
-    val finish_details: FinishDetails // Added this field
+    val finish_details: FinishDetails? = null // Added this field
     // Uncomment if 'finish_reason' is expected in the response
     // val finish_reason: String? = null
 )

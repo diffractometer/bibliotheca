@@ -45,7 +45,7 @@ fun Application.configureRouting(
         }
         get("/bibliotheca/processImages") {
             val processImagesResponse: Unit = bookService.processImagesInBackground()
-            call.respond(HttpStatusCode.OK, "Image processing started..." + "${processImagesResponse}")
+            call.respond(HttpStatusCode.OK, "Image processing started...")
         }
     }
 }

@@ -12,6 +12,7 @@ import java.time.Duration
 class S3(val config: S3Config)
 
 fun S3.createPresignedUrl(objectKey: String): String {
+    println("env: ${System.getenv("AWS_ACCESS_KEY_ID")}")
     val presigner = S3Presigner.builder()
         .region(Region.of(config.region))
         .credentialsProvider(DefaultCredentialsProvider.create())
@@ -33,6 +34,8 @@ fun S3.createPresignedUrl(objectKey: String): String {
 }
 
 fun S3.listImagesFromBucket(): List<String> {
+    println("env: ${System.getenv("AWS_ACCESS_KEY_ID")}")
+    println("config: ${config.region}")
     val s3 = S3Client.builder()
         .region(Region.of(config.region))
         .credentialsProvider(DefaultCredentialsProvider.create())
