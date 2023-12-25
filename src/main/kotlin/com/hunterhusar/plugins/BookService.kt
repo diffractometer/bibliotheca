@@ -32,8 +32,12 @@ class BookService(
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
+            // the "chunk" is how many images we add to the process request
             println("unprocessedImageKeys: $unprocessedImageKeys")
-            unprocessedImageKeys.chunked(20).forEach { batch ->
+            // if (unprocessedImageKeys.isNotEmpty()) {
+            //     processBatch(unprocessedImageKeys.take(10))
+            // }
+            unprocessedImageKeys.chunked(5).forEach { batch ->
                 processBatch(batch)
             }
         }
@@ -45,23 +49,23 @@ class BookService(
     }
 
     private suspend fun processBatch(batch: List<String>) {
-        var isTestMode = true
+        val isTestMode = false
 
         val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
         val requestBody = buildRequestBody(signedImageUrls)
 
         if (isTestMode) {
-            // If in test mode, print the request body instead of sending it
             println("Request Body for testing: $requestBody")
         } else {
-            // If not in test mode, send the actual request
+            println("Request Body: $requestBody")
             val response = sendApiRequest(requestBody)
             val protoBooks: List<ProtoBook> = parseResponse(response)
             val updatedProtoBooks = protoBooks.zip(batch) { protoBook, imageKey ->
-                protoBook.copy(coverImageS3Url = imageKey) // Modify as per your structure
+                protoBook.copy(coverImageS3Url = imageKey)
             }
             println("updatedProtoBooks: $updatedProtoBooks")
             db.insertBooks(updatedProtoBooks)
+            db.insertProcessedImages(batch)
         }
     }
 
@@ -100,6 +104,7 @@ class BookService(
     }
 
     private fun parseResponse(responseBody: String): List<ProtoBook> {
+        println("responseBody: ${responseBody}")
         val json = Json { ignoreUnknownKeys = true }
         val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
         val messageContent = openAIResponse.choices.first().message.content

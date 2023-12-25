@@ -12,6 +12,15 @@ import java.util.*
 
 class BookRepository(private val connection: Connection) {
 
+    suspend fun insertProcessedImages(imageKeys: List<String>) = withContext(Dispatchers.IO) {
+        val insertQuery = "INSERT INTO processedimages (image_key) VALUES (?);"
+        imageKeys.forEach { imageKey ->
+            val statement = connection.prepareStatement(insertQuery)
+            statement.setString(1, imageKey)
+            statement.executeUpdate()
+        }
+    }
+
     suspend fun getUnprocessedImageKeys(allImageKeys: List<String>): List<String> = withContext(Dispatchers.IO) {
         // Get all processed image keys in one query
         val processedKeysSet = mutableSetOf<String>()
