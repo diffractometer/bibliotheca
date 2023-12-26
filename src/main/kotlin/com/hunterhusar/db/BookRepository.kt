@@ -100,7 +100,6 @@ class BookRepository(private val connection: Connection) {
         val statement = connection.prepareStatement(query)
         statement.setObject(1, bookId)
         val resultSet = statement.executeQuery()
-
         if (resultSet.next()) {
             val genreId = if (resultSet.getInt("genre_id") == 0) null else resultSet.getInt("genre_id")
             Book(
@@ -112,8 +111,8 @@ class BookRepository(private val connection: Connection) {
                 position = resultSet.getInt("position"),
                 verified = resultSet.getBoolean("verified"),
                 coverImageS3Url = resultSet.getString("cover_image_s3_url"),
-                createdAt = resultSet.getString("created_at"),
-                updatedAt = resultSet.getString("updated_at")
+                createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
+                updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
             )
         } else {
             null
@@ -124,7 +123,6 @@ class BookRepository(private val connection: Connection) {
         val query = loadQueryFromFile("sql/queries/V1__Select_all_books.sql")
         val statement = connection.prepareStatement(query)
         val resultSet = statement.executeQuery()
-
         generateSequence {
             if (resultSet.next()) {
                 val genreId = if (resultSet.getInt("genre_id") == 0) null else resultSet.getInt("genre_id")
@@ -137,8 +135,8 @@ class BookRepository(private val connection: Connection) {
                     position = resultSet.getInt("position"),
                     verified = resultSet.getBoolean("verified"),
                     coverImageS3Url = resultSet.getString("cover_image_s3_url"),
-                    createdAt = resultSet.getString("created_at"),
-                    updatedAt = resultSet.getString("updated_at")
+                    createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
+                    updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
                 )
             } else {
                 null

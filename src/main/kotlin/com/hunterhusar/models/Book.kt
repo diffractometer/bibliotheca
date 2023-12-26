@@ -1,6 +1,8 @@
 package com.hunterhusar.models
 
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import java.time.LocalDateTime
 
 data class ProtoBook(
     val title: String,
@@ -18,8 +20,8 @@ data class Book(
     val position: Int?,
     val verified: Boolean,
     val coverImageS3Url: String? = null,
-    val createdAt: String,
-    val updatedAt: String,
+    @Contextual val createdAt: LocalDateTime,
+    @Contextual val updatedAt: LocalDateTime,
 )
 
 @Serializable
@@ -35,6 +37,7 @@ data class BookWebResponse(
     val coverImageS3Url: String? = null,
     val createdAt: String,
     val updatedAt: String,
+    val status: String
 )
 
 

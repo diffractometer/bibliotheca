@@ -31,6 +31,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:2.2.4")
     implementation("io.ktor:ktor-server-content-negotiation-jvm:2.2.4")
     implementation("org.postgresql:postgresql:$postgres_version")
+
+    implementation("io.ktor:ktor-server-cors:$ktor_version")
     // Remove the H2 dependency if you're not using it
     // implementation("com.h2database:h2:$h2_version")
     implementation("io.ktor:ktor-server-netty-jvm:2.2.4")

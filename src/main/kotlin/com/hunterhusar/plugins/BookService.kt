@@ -7,12 +7,14 @@ import com.hunterhusar.openai.OpenAIVisionPreviewResponse
 import com.hunterhusar.plugins.aws.S3
 import com.hunterhusar.plugins.aws.createPresignedUrl
 import com.hunterhusar.plugins.aws.listImagesFromBucket
+import com.hunterhusar.plugins.time.humanReadable
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.util.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
+import truncate
 import java.util.*
 
 class BookService(
@@ -104,16 +106,24 @@ class BookService(
     }
 
     private fun parseResponse(responseBody: String): List<ProtoBook> {
-        println("responseBody: ${responseBody}")
+        println("responseBody: $responseBody")
         val json = Json { ignoreUnknownKeys = true }
         val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
         val messageContent = openAIResponse.choices.first().message.content
-        return messageContent.lineSequence()
-            .mapNotNull { line -> line.takeIf { !it.contains("null") } }
-            .map { entry ->
-                val (title, author) = entry.split(",", limit = 2).map { it.trim('"', ' ').trim() }
-                ProtoBook(title, author)
-            }.toList()
+
+        return messageContent.split("\n")  // Split by newline
+            .filter { it.isNotBlank() }  // Filter out empty lines
+            .mapNotNull { entry ->
+                // Split each entry by the first comma to separate title and author
+                val parts = entry.split(",", limit = 2)
+                if (parts.size == 2) {
+                    val title = parts[0].trim('"', ' ').trim()
+                    val author = parts[1].trim('"', ' ').trim()
+                    if (author != "null")  // Filter out entries where author is null
+                        ProtoBook(title, author)
+                    else null
+                } else null
+            }
     }
 
     fun generatePackingManifest(): ManifestWebResponse = runBlocking {
@@ -200,15 +210,17 @@ class BookService(
         book?.let {
             BookWebResponse(
                 id = it.id,
-                title = it.title,
-                author = it.author,
+                title = book.title.truncate(50),
+                author = book.author.truncate(30),
                 genre = genres[it.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${it.id}",
                 uri = "/bibliotheca/${it.id}",
+                coverImageS3Url = s3.createPresignedUrl(it.coverImageS3Url ?: ""), // probably should not be nullable
                 cell = it.cell,
                 position = it.position,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
+                createdAt = book.createdAt.humanReadable(),
+                updatedAt = book.updatedAt.humanReadable(),
+                status = if (it.verified) "Verified" else ""
             )
         }
     }
@@ -219,16 +231,17 @@ class BookService(
         return@withContext books.map { book ->
             BookWebResponse(
                 id = book.id,
-                title = book.title,
-                author = book.author,
+                title = book.title.truncate(50),
+                author = book.author.truncate(30),
                 genre = genres[book.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 uri = "/bibliotheca/${book.id}",
-                coverImageS3Url = book.coverImageS3Url,
+                coverImageS3Url = s3.createPresignedUrl(book.coverImageS3Url ?: ""), // probably should not be nullable
                 cell = book.cell,
                 position = book.position,
-                createdAt = book.createdAt,
-                updatedAt = book.updatedAt,
+                createdAt = book.createdAt.humanReadable(),
+                updatedAt = book.updatedAt.humanReadable(),
+                status = if (book.verified) "Verified" else ""
             )
         }
     }

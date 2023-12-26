@@ -19,6 +19,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 
 
 fun main() {
@@ -27,6 +28,22 @@ fun main() {
 }
 
 fun Application.module() {
+    install(CORS) {
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Patch)
+        allowHeader(HttpHeaders.Authorization)
+        allowCredentials = true
+        allowNonSimpleContentTypes = true
+        allowSameOrigin = true
+        anyHost() // Potentially open your API to being accessible from any host
+        // For specific host:
+        // host("specific.domain.com", schemes = listOf("http", "https"))
+    }
+
     val config = ConfigLoaderBuilder.default()
         .addResourceSource("/development.yml")
         .build()
