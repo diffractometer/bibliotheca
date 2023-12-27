@@ -19,4 +19,4 @@ s3Config:
   folder: bookshelf_cells
 
 prompt: |
-  For each book visible in the images, provide the title and author in CSV format, be strict about CSV formatting with only the title and author in your response. If a book's title or author cannot be determined, respond with 'null' in the appropriate field. List each book from each image on a new line.
+  For each book visible in the images, provide the title and author in strict CSV format. Each line should contain exactly two fields: the title and the author, separated by a comma. If a book's title or author cannot be determined, explicitly include 'null' as the value for that field. Ensure each book's details from each image are listed on a new line, maintaining a consistent CSV format throughout. Do not include additional text, comments, or deviations from the specified format.

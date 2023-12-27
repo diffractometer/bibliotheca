@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 data class ProtoBook(
     val title: String,
     val author: String,
-    val coverImageS3Url: String? = null,
+    val coverImageS3Url: String,
 )
 
 @Serializable

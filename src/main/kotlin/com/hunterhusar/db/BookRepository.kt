@@ -22,10 +22,11 @@ class BookRepository(private val connection: Connection) {
     }
 
     suspend fun getUnprocessedImageKeys(allImageKeys: List<String>): List<String> = withContext(Dispatchers.IO) {
-        // Get all processed image keys in one query
+        // Get all image keys in one query
         val processedKeysSet = mutableSetOf<String>()
-        // make book query?
-        val query = loadQueryFromFile("sql/queries/V1__SelectProcessedImageKeys.sql")
+
+        // Query to select all cover_image_s3_url from Books table
+        val query = "SELECT cover_image_s3_url FROM Books WHERE cover_image_s3_url = ANY(?);"
 
         val statement = connection.prepareStatement(query).apply {
             val array = connection.createArrayOf("VARCHAR", allImageKeys.toTypedArray())
@@ -34,7 +35,7 @@ class BookRepository(private val connection: Connection) {
 
         val resultSet = statement.executeQuery()
         while (resultSet.next()) {
-            processedKeysSet.add(resultSet.getString("image_key"))
+            processedKeysSet.add(resultSet.getString("cover_image_s3_url"))
         }
 
         // Return the list of keys that are not in the processedKeysSet
@@ -69,16 +70,22 @@ class BookRepository(private val connection: Connection) {
 
     suspend fun insertBook(book: ProtoBook): Result<UUID?> = withContext(Dispatchers.IO) {
         runCatching {
-            // Check if a book with the same title already exists
-            val checkQuery = "SELECT id FROM Books WHERE title = ?;"
-            val checkStatement = connection.prepareStatement(checkQuery).apply {
+            // Check if a book with the same title (case insensitive) or same coverImageS3Url already exists
+            val checkTitleQuery = "SELECT id FROM Books WHERE LOWER(title) = LOWER(?);"
+            val checkCoverQuery = "SELECT id FROM Books WHERE cover_image_s3_url = ?;"
+
+            val checkTitleStatement = connection.prepareStatement(checkTitleQuery).apply {
                 setString(1, book.title)
             }
-            val resultSet = checkStatement.executeQuery()
+            val checkCoverStatement = connection.prepareStatement(checkCoverQuery).apply {
+                setString(1, book.coverImageS3Url)
+            }
 
-            // If a book with the same title exists, return its id instead of creating a new one
-            if (resultSet.next()) {
-                UUID.fromString(resultSet.getString("id"))
+            val titleResultSet = checkTitleStatement.executeQuery()
+            val coverResultSet = checkCoverStatement.executeQuery()
+
+            if (titleResultSet.next() || coverResultSet.next()) {
+                UUID.fromString(titleResultSet.getString("id"))  // or coverResultSet if needed
             } else {
                 // Insert the new book
                 val insertQuery = "INSERT INTO Books (id, title, author, cover_image_s3_url) VALUES (?, ?, ?, ?);"
@@ -94,6 +101,7 @@ class BookRepository(private val connection: Connection) {
             }
         }
     }
+
 
     suspend fun findBookById(bookId: UUID): Book? = withContext(Dispatchers.IO) {
         val query = "SELECT * FROM Books WHERE id = ?;"

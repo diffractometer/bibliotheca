@@ -34,12 +34,12 @@ class BookService(
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
+                // .take(30)
+            // !!!! important ^ take is enabled for testing, only the first 5 images will be processed
+
             // the "chunk" is how many images we add to the process request
             println("unprocessedImageKeys: $unprocessedImageKeys")
-            // if (unprocessedImageKeys.isNotEmpty()) {
-            //     processBatch(unprocessedImageKeys.take(10))
-            // }
-            unprocessedImageKeys.chunked(5).forEach { batch ->
+            unprocessedImageKeys.chunked(10).forEach { batch ->
                 processBatch(batch)
             }
         }
@@ -50,10 +50,10 @@ class BookService(
         return db.getUnprocessedImageKeys(imageKeys)
     }
 
-    private suspend fun processBatch(batch: List<String>) {
+    private suspend fun processBatch(keys: List<String>) {
         val isTestMode = false
 
-        val signedImageUrls = batch.map { s3.createPresignedUrl(it) }
+        val signedImageUrls = keys.map { s3.createPresignedUrl(it) }
         val requestBody = buildRequestBody(signedImageUrls)
 
         if (isTestMode) {
@@ -61,13 +61,15 @@ class BookService(
         } else {
             println("Request Body: $requestBody")
             val response = sendApiRequest(requestBody)
-            val protoBooks: List<ProtoBook> = parseResponse(response)
-            val updatedProtoBooks = protoBooks.zip(batch) { protoBook, imageKey ->
-                protoBook.copy(coverImageS3Url = imageKey)
+            val result = parseResponse(response, keys)
+
+            result.onSuccess { protoBooks ->
+                println("Successfully parsed protoBooks: $protoBooks")
+                db.insertBooks(protoBooks) // Ensure this method can accept the list of ProtoBook
+                // db.insertProcessedImages(keys)
+            }.onFailure { exception ->
+                println("Failed to parse response: ${exception.message}") // Log or handle error
             }
-            println("updatedProtoBooks: $updatedProtoBooks")
-            db.insertBooks(updatedProtoBooks)
-            db.insertProcessedImages(batch)
         }
     }
 
@@ -104,26 +106,36 @@ class BookService(
         }
         return response.bodyAsText()
     }
+    private fun parseResponse(responseBody: String, keys: List<String>): Result<List<ProtoBook>> {
+        return runCatching {
+            println("\n\nresponseBody: $responseBody\n\n")
+            val json = Json { ignoreUnknownKeys = true }
+            val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
+            val openAIMessages = openAIResponse.choices.first().message.content
+            println("\n\nmessageContent: $openAIMessages\n\n")
 
-    private fun parseResponse(responseBody: String): List<ProtoBook> {
-        println("responseBody: $responseBody")
-        val json = Json { ignoreUnknownKeys = true }
-        val openAIResponse: OpenAIVisionPreviewResponse = json.decodeFromString(responseBody)
-        val messageContent = openAIResponse.choices.first().message.content
-
-        return messageContent.split("\n")  // Split by newline
-            .filter { it.isNotBlank() }  // Filter out empty lines
-            .mapNotNull { entry ->
-                // Split each entry by the first comma to separate title and author
-                val parts = entry.split(",", limit = 2)
-                if (parts.size == 2) {
-                    val title = parts[0].trim('"', ' ').trim()
-                    val author = parts[1].trim('"', ' ').trim()
-                    if (author != "null")  // Filter out entries where author is null
-                        ProtoBook(title, author)
-                    else null
-                } else null
-            }
+            val booksFromMessages = openAIMessages.split("\n")
+                .filter { it.isNotBlank() }
+                .mapNotNull { entry ->
+                    val parts = entry.split(",", limit = 2)
+                    if (parts.size == 2) {
+                        val title = parts[0].trim('"', ' ').trim()
+                        val author = parts[1].trim('"', ' ').trim()
+                        if (author != "null") title to author else null
+                    } else null
+                }
+                .zip(keys)  // Pair each book with a key
+                .map { (book, imageKey) ->
+                    ProtoBook(
+                        title = book.first,
+                        author = book.second,
+                        coverImageS3Url = imageKey
+                    )
+                }
+            booksFromMessages  // This is the successful result
+        }.onFailure { exception ->
+            println("Error parsing response: ${exception.message}")  // Log error
+        }
     }
 
     fun generatePackingManifest(): ManifestWebResponse = runBlocking {
