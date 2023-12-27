@@ -33,7 +33,7 @@ class BookService(
     @OptIn(DelicateCoroutinesApi::class, InternalAPI::class)
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
-            val amountToTakeAtATime = 30
+            val amountToTakeAtATime = 50
 
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
                 .take(amountToTakeAtATime) // !!!! important, testing only, take "ahead"

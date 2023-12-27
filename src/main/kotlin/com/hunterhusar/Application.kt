@@ -57,7 +57,8 @@ fun Application.module() {
             header(HttpHeaders.Authorization, "Bearer $openAIKey")
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 60_000
+            // requestTimeoutMillis = 60_000
+            requestTimeoutMillis = 300_000
         }
     }
     val s3Service = S3(config.s3Config)
