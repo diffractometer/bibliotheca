@@ -33,14 +33,12 @@ class BookService(
     @OptIn(DelicateCoroutinesApi::class, InternalAPI::class)
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
-            val amountToTakeAtATime = 50
 
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
-                .take(amountToTakeAtATime) // !!!! important, testing only, take "ahead"
-
-            // the "chunk" is how many images we add to the process request
+                // .take(10) // uncomment to only grab a few unprocessed images at a time
             println("unprocessedImageKeys: $unprocessedImageKeys")
-            unprocessedImageKeys.chunked(amountToTakeAtATime).forEach { batch ->
+            // the "chunk" is how many images we add to the process request
+            unprocessedImageKeys.chunked(50).forEach { batch ->
                 processBatch(batch)
             }
         }
@@ -239,7 +237,7 @@ class BookService(
                 genre = genres[book.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 uri = "/bibliotheca/${book.id}",
-                coverImageS3Url = s3.createPresignedUrl(book.coverImageS3Url ?: ""), // probably should not be nullable
+                coverImageS3Url = s3.createPresignedUrl(book.coverImageS3Url ?: ""),
                 cell = book.cell,
                 position = book.position,
                 createdAt = book.createdAt.humanReadable(),

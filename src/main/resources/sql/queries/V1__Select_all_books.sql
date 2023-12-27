@@ -1,1 +1,2 @@
-SELECT * FROM books ORDER BY created_at DESC;
+SELECT * FROM books
+ORDER BY title DESC;
