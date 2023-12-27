@@ -5,16 +5,16 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 
 data class ProtoBook(
-    val title: String,
-    val author: String,
+    val title: String? = null,
+    val author: String? = null,
     val coverImageS3Url: String,
 )
 
 @Serializable
 data class Book(
     val id: String,
-    val title: String,
-    val author: String,
+    val title: String? = null,
+    val author: String? = null,
     val genreId: Int?,
     val cell: Int?,
     val position: Int?,
@@ -27,8 +27,8 @@ data class Book(
 @Serializable
 data class BookWebResponse(
     val id: String,
-    val title: String,
-    val author: String,
+    val title: String?,
+    val author: String?,
     val genre: String,
     val cell: Int?,
     val position: Int?,

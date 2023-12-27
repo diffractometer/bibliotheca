@@ -12,8 +12,8 @@ CREATE TABLE Genres
 CREATE TABLE Books
 (
     id       UUID PRIMARY KEY      DEFAULT uuid_generate_v4(), -- Unique identifier for each book
-    title    VARCHAR(255) NOT NULL,                            -- Title of the book
-    author   VARCHAR(255) NOT NULL,                            -- Author of the book
+    title    VARCHAR(255) NULL,                                -- Title of the book
+    author   VARCHAR(255) NULL,                                -- Author of the book
     genre_id INT REFERENCES Genres (id) NULL,                  -- Foreign key to the genre
     cell     INT          NULL,                                -- Sequential cell number across all shelves
     position INT          NULL,                                -- Position within a cell (1-X)

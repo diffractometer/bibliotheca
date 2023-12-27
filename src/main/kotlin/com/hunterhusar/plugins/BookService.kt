@@ -33,13 +33,14 @@ class BookService(
     @OptIn(DelicateCoroutinesApi::class, InternalAPI::class)
     fun processImages() {
         GlobalScope.launch(Dispatchers.IO) {
+            val amountToTakeAtATime = 30
+
             val unprocessedImageKeys = fetchUnprocessedImageKeys()
-                // .take(30)
-            // !!!! important ^ take is enabled for testing, only the first 5 images will be processed
+                .take(amountToTakeAtATime) // !!!! important, testing only, take "ahead"
 
             // the "chunk" is how many images we add to the process request
             println("unprocessedImageKeys: $unprocessedImageKeys")
-            unprocessedImageKeys.chunked(10).forEach { batch ->
+            unprocessedImageKeys.chunked(amountToTakeAtATime).forEach { batch ->
                 processBatch(batch)
             }
         }
@@ -106,6 +107,7 @@ class BookService(
         }
         return response.bodyAsText()
     }
+
     private fun parseResponse(responseBody: String, keys: List<String>): Result<List<ProtoBook>> {
         return runCatching {
             println("\n\nresponseBody: $responseBody\n\n")
@@ -114,27 +116,16 @@ class BookService(
             val openAIMessages = openAIResponse.choices.first().message.content
             println("\n\nmessageContent: $openAIMessages\n\n")
 
-            val booksFromMessages = openAIMessages.split("\n")
-                .filter { it.isNotBlank() }
-                .mapNotNull { entry ->
-                    val parts = entry.split(",", limit = 2)
-                    if (parts.size == 2) {
-                        val title = parts[0].trim('"', ' ').trim()
-                        val author = parts[1].trim('"', ' ').trim()
-                        if (author != "null") title to author else null
-                    } else null
-                }
-                .zip(keys)  // Pair each book with a key
-                .map { (book, imageKey) ->
-                    ProtoBook(
-                        title = book.first,
-                        author = book.second,
-                        coverImageS3Url = imageKey
-                    )
-                }
-            booksFromMessages  // This is the successful result
+            val messageLines = openAIMessages.split("\n")
+            val booksFromMessages = messageLines.zip(keys) { entry, imageKey ->
+                val parts = entry.split(",", limit = 2).map { it.trim('"', ' ').trim() }
+                val title = parts.getOrNull(0)?.takeIf { it != "null" }  // allows null
+                val author = parts.getOrNull(1)?.takeIf { it != "null" }  // allows null
+                ProtoBook(title = title, author = author, coverImageS3Url = imageKey)
+            }
+            booksFromMessages
         }.onFailure { exception ->
-            println("Error parsing response: ${exception.message}")  // Log error
+            println("Error parsing response: ${exception.message}")
         }
     }
 
@@ -222,8 +213,8 @@ class BookService(
         book?.let {
             BookWebResponse(
                 id = it.id,
-                title = book.title.truncate(50),
-                author = book.author.truncate(30),
+                title = book.title?.truncate(50),
+                author = book.author?.truncate(30),
                 genre = genres[it.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${it.id}",
                 uri = "/bibliotheca/${it.id}",
@@ -243,8 +234,8 @@ class BookService(
         return@withContext books.map { book ->
             BookWebResponse(
                 id = book.id,
-                title = book.title.truncate(50),
-                author = book.author.truncate(30),
+                title = book.title?.truncate(50),
+                author = book.author?.truncate(30),
                 genre = genres[book.genreId]?.name ?: "Unknown",
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 uri = "/bibliotheca/${book.id}",
