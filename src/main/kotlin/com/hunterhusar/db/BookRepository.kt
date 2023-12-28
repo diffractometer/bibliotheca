@@ -102,7 +102,6 @@ class BookRepository(private val connection: Connection) {
         }
     }
 
-
     suspend fun findBookById(bookId: UUID): Book? = withContext(Dispatchers.IO) {
         val query = "SELECT * FROM Books WHERE id = ?;"
         val statement = connection.prepareStatement(query)
@@ -127,18 +126,33 @@ class BookRepository(private val connection: Connection) {
         }
     }
 
-    suspend fun listAll(): List<Book> = withContext(Dispatchers.IO) {
-        val query = loadQueryFromFile("sql/queries/V1__Select_all_books.sql")
+    suspend fun listAll(
+        genreId: Int? = null,
+    ): List<Book> = withContext(Dispatchers.IO) {
+        // Load the SQL query from file or define it here directly
+        val query = if (genreId != null) {
+            // Adjust your query to accept a parameter for genre_id
+            "SELECT * FROM books WHERE genre_id = ? ORDER BY title ASC;"
+        } else {
+            // The original query without filtering by genre_id
+            "SELECT * FROM books ORDER BY title ASC;"
+        }
+
         val statement = connection.prepareStatement(query)
+
+        // Set the genre_id in the query if it's provided
+        if (genreId != null) {
+            statement.setInt(1, genreId)
+        }
+
         val resultSet = statement.executeQuery()
         generateSequence {
             if (resultSet.next()) {
-                val genreId = if (resultSet.getInt("genre_id") == 0) null else resultSet.getInt("genre_id")
                 Book(
                     id = resultSet.getString("id"),
                     title = resultSet.getString("title"),
                     author = resultSet.getString("author"),
-                    genreId = genreId,
+                    genreId = resultSet.getInt("genre_id").takeIf { it != 0 },
                     cell = resultSet.getInt("cell"),
                     position = resultSet.getInt("position"),
                     verified = resultSet.getBoolean("verified"),
