@@ -159,19 +159,27 @@ class BookRepository(private val connection: Connection) {
     }
 
     suspend fun getGenres(): List<Genre> = withContext(Dispatchers.IO) {
-        val genres = mutableListOf<Genre>()
-        val query = "SELECT id, name FROM Genres;"
+        val genresWithCount = mutableListOf<Genre>()
+        val query = """
+            SELECT g.id, g.name, COUNT(b.genre_id) as book_count
+            FROM Genres g
+            LEFT JOIN Books b ON g.id = b.genre_id
+            GROUP BY g.id, g.name
+            ORDER BY g.name;
+        """
         val statement = connection.prepareStatement(query)
         val resultSet = statement.executeQuery()
         while (resultSet.next()) {
             val genre = Genre(
                 id = resultSet.getInt("id"),
-                name = resultSet.getString("name")
+                name = resultSet.getString("name"),
+                count = resultSet.getInt("book_count")  // Add count field to Genre class
             )
-            genres.add(genre)
+            genresWithCount.add(genre)
         }
-        genres
+        genresWithCount
     }
+
 
     suspend fun setGenreId(bookId: String, genreId: Int) = withContext(Dispatchers.IO) {
         runCatching {
