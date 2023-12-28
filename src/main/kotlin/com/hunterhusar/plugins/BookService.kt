@@ -23,6 +23,15 @@ class BookService(
     private val config: BibliothecaConfig,
     private val s3: S3
 ) {
+
+    suspend fun getGenresEndpoint(): Result<List<Genre>> = withContext(Dispatchers.IO) {
+        runCatching {
+            db.getGenres()
+        }.onFailure { exception ->
+            println("Error fetching genres: ${exception.message}")
+        }
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     fun processImagesInBackground() {
         GlobalScope.launch(Dispatchers.IO) { // Launch coroutine in the background
@@ -234,8 +243,8 @@ class BookService(
         }
     }
 
-    suspend fun getBooks(): List<BookWebResponse> = withContext(Dispatchers.IO) {
-        val books = db.listAll()
+    suspend fun getBooks(genreIds: List<Int>? = null): List<BookWebResponse> = withContext(Dispatchers.IO) {
+        val books = db.listAll(genreIds)
         val genres = db.getGenres().associateBy { it.id }
         return@withContext books.map { book ->
             BookWebResponse(

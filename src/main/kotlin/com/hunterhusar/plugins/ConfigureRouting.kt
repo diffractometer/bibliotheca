@@ -1,6 +1,7 @@
 package com.hunterhusar.plugins
 
 import com.hunterhusar.models.BibliothecaConfig
+import com.hunterhusar.models.Genre
 import com.hunterhusar.models.ManifestWebResponse
 import com.hunterhusar.plugins.views.respondBookDetails
 import com.hunterhusar.plugins.views.respondPackingManifest
@@ -25,7 +26,9 @@ fun Application.configureRouting(
             call.respond(HttpStatusCode.OK, books)
         }
         get("/bibliotheca") {
-            val books = bookService.getBooks()
+            val genreIdsParam = call.request.queryParameters["genreIds"]
+            val genreIds = genreIdsParam?.split(",")?.mapNotNull { it.toIntOrNull() }
+            val books = bookService.getBooks(genreIds)
             call.respond(HttpStatusCode.OK, books)
         }
         post("/bibliotheca/processGenres") {
@@ -42,6 +45,18 @@ fun Application.configureRouting(
         get("/bibliotheca/manifest") {
             val manifestWebResponse: ManifestWebResponse = bookService.generatePackingManifest()
             call.respondPackingManifest(manifestWebResponse, config.qrCodeConfig)
+        }
+        get("/bibliotheca/genres") {
+            val genresResult = bookService.getGenresEndpoint()
+            when {
+                genresResult.isSuccess -> {
+                    val genres: List<Genre> = genresResult.getOrNull() ?: listOf()
+                    call.respond(HttpStatusCode.OK, genres)
+                }
+                else -> {
+                    call.respond(HttpStatusCode.InternalServerError, "Error fetching genres")
+                }
+            }
         }
         post("/bibliotheca/processImages") {
             bookService.processImagesInBackground()

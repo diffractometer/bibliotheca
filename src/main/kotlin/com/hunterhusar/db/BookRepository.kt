@@ -127,23 +127,17 @@ class BookRepository(private val connection: Connection) {
     }
 
     suspend fun listAll(
-        genreId: Int? = null,
+        genreIds: List<Int>? = null
     ): List<Book> = withContext(Dispatchers.IO) {
-        // Load the SQL query from file or define it here directly
-        val query = if (genreId != null) {
-            // Adjust your query to accept a parameter for genre_id
-            "SELECT * FROM books WHERE genre_id = ? ORDER BY title ASC;"
-        } else {
-            // The original query without filtering by genre_id
-            "SELECT * FROM books ORDER BY title ASC;"
+        val query: String = when {
+            genreIds.isNullOrEmpty() -> "SELECT * FROM books ORDER BY title ASC;"
+            else -> {
+                val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
+                "SELECT * FROM books WHERE genre_id IN $genresPlaceholder ORDER BY title ASC;"
+            }
         }
 
         val statement = connection.prepareStatement(query)
-
-        // Set the genre_id in the query if it's provided
-        if (genreId != null) {
-            statement.setInt(1, genreId)
-        }
 
         val resultSet = statement.executeQuery()
         generateSequence {
@@ -160,9 +154,7 @@ class BookRepository(private val connection: Connection) {
                     createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
                     updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
                 )
-            } else {
-                null
-            }
+            } else null
         }.toList()
     }
 
@@ -194,7 +186,6 @@ class BookRepository(private val connection: Connection) {
             println("Error setting genre for book ID $bookId: ${exception.message}")
         }
     }
-
 
     private fun loadQueryFromFile(filePath: String): String {
         return this::class.java.classLoader.getResource(filePath)?.readText() ?: throw FileNotFoundException(filePath)
