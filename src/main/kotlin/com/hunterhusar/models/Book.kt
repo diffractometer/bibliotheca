@@ -35,11 +35,11 @@ data class BookWebResponse(
     val url: String? = null,
     val uri: String? = null,
     val coverImageS3Url: String? = null,
+    val coverImageS3UrlSmall: String? = null,
     val createdAt: String,
     val updatedAt: String,
     val status: String
 )
-
 
 @Serializable
 data class ManifestWebResponse(

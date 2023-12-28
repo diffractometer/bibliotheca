@@ -247,6 +247,15 @@ class BookService(
         val books = db.listAll(genreIds)
         val genres = db.getGenres().associateBy { it.id }
         return@withContext books.map { book ->
+
+            // Handling the URL by splitting and then reconstructing with 'small' directory
+            val parts = book.coverImageS3Url?.split("/")
+            val coverImageUrlSmall = if (parts?.contains("bookshelf_cells") == true) {
+                parts.joinToString("/") { if (it == "bookshelf_cells") "$it/small" else it }
+            } else {
+                book.coverImageS3Url  // or handle the error/exception case as appropriate
+            }
+
             BookWebResponse(
                 id = book.id,
                 title = book.title?.truncate(50),
@@ -255,6 +264,7 @@ class BookService(
                 url = "${config.qrCodeConfig.baseUrl}/bibliotheca/${book.id}",
                 uri = "/bibliotheca/${book.id}",
                 coverImageS3Url = s3.createPresignedUrl(book.coverImageS3Url ?: ""),
+                coverImageS3UrlSmall = s3.createPresignedUrl(coverImageUrlSmall ?: ""),
                 cell = book.cell,
                 position = book.position,
                 createdAt = book.createdAt.humanReadable(),
