@@ -150,43 +150,50 @@ class BookService(
         }
     }
 
+
     @OptIn(InternalAPI::class)
     suspend fun processGenres() = withContext(Dispatchers.IO) {
         val books = db.listAll()
         val genreList = db.getGenres().joinToString(", ") { it.name }
 
-        books.forEach { book ->
-            runCatching {
-                val requestBody = buildJsonObject {
-                    put("model", "gpt-3.5-turbo-1106")
-                    putJsonObject("response_format") {
-                        put("type", "json_object")
-                    }
-                    putJsonArray("messages") {
-                        addJsonObject {
-                            put("role", "system")
-                            put("content", "You are a helpful library assistant designed to output the genre of a book in JSON format. The genre should be one of the following: $genreList. Respond only with the genre of the book.")
+        books.reversed().take(3).filter { it.title != null }.chunked(50).forEach { batch ->
+            batch.forEach { book ->
+                runCatching {
+                    val author = book.author ?: "unknown author"
+                    val title = book.title ?: "unknown title"
+                    val requestBody = buildJsonObject {
+                        put("model", "gpt-3.5-turbo-1106")
+                        putJsonObject("response_format") {
+                            put("type", "json_object")
                         }
-                        addJsonObject {
-                            put("role", "user")
-                            put("content", "Given the title and author of this book, determine it's genre: ${book.title} by ${book.author}")
+                        putJsonArray("messages") {
+                            addJsonObject {
+                                put("role", "system")
+                                put("content", "You are a helpful assistant designed to output JSON. Provide the genre of the book in CSV format from the following list: $genreList.")
+                            }
+                            addJsonObject {
+                                put("role", "user")
+                                put("content", "${book.id},$title,$author")
+                            }
                         }
                     }
+
+                    println("Sending requestBody: $requestBody")
+                    val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
+                        body = requestBody.toString()
+                    }
+                    val responseBody = response.bodyAsText()
+                    println("\n\nReceived response: $responseBody\n\n")
+                    val json = Json { ignoreUnknownKeys = true }
+                    val openAIResponse: OpenAIResponse = json.decodeFromString(responseBody)
+                    println("\n\n openAIResponse: $openAIResponse\n\n")
+                    // val messageContent = openAIResponse.choices.first().message.content
+                    // val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
+
+                    // processGenreResponse(book, winnerResponse)
+                }.onFailure {
+                    println("Error processing book: ${it.message}")
                 }
-
-                val response: HttpResponse = client.post("https://api.openai.com/v1/chat/completions") {
-                    body = requestBody.toString()
-                }
-
-                val responseBody = response.bodyAsText()
-                val openAIResponse: OpenAIResponse = Json.decodeFromString(responseBody)
-                val messageContent = openAIResponse.choices.first().message.content
-                val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
-
-                processGenreResponse(book, winnerResponse)
-            }.onFailure {
-                // Log the error and continue with the next book
-                println("Error processing book ${book.title} by ${book.author}: ${it.message}")
             }
         }
     }

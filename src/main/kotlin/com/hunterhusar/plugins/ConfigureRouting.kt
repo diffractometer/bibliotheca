@@ -28,7 +28,7 @@ fun Application.configureRouting(
             val books = bookService.getBooks()
             call.respond(HttpStatusCode.OK, books)
         }
-        get("/processGenres") {
+        post("/bibliotheca/processGenres") {
             bookService.processGenresInBackground()
             call.respond(HttpStatusCode.OK, "Genres processing started...")
         }
@@ -44,7 +44,7 @@ fun Application.configureRouting(
             call.respondPackingManifest(manifestWebResponse, config.qrCodeConfig)
         }
         post("/bibliotheca/processImages") {
-            val processImagesResponse: Unit = bookService.processImagesInBackground()
+            bookService.processImagesInBackground()
             call.respond(HttpStatusCode.OK, "Image processing started...")
         }
     }
