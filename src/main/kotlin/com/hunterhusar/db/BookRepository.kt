@@ -168,11 +168,17 @@ class BookRepository(private val connection: Connection) {
     }
 
     suspend fun setGenreId(bookId: String, genreId: Int) = withContext(Dispatchers.IO) {
-        val query = loadQueryFromFile("sql/queries/V1__Set_genre_id.sql")
-        val statement = connection.prepareStatement(query)
-        statement.setInt(1, genreId)
-        statement.setObject(2, UUID.fromString(bookId)) // Explicitly cast bookId to UUID
-        statement.executeUpdate()
+        runCatching {
+            // sql/queries/V1__Set_genre_id.sql = UPDATE Books SET genre_id = ? WHERE id = ?;
+            val query = loadQueryFromFile("sql/queries/V1__Set_genre_id.sql")
+            val statement = connection.prepareStatement(query)
+            statement.setInt(1, genreId)
+            statement.setObject(2, UUID.fromString(bookId)) // Explicitly cast bookId to UUID
+            statement.executeUpdate()
+        }.onFailure { exception ->
+            // Log the exception or handle it as needed
+            println("Error setting genre for book ID $bookId: ${exception.message}")
+        }
     }
 
 

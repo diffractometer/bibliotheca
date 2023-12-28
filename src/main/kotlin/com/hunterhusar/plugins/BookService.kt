@@ -150,14 +150,15 @@ class BookService(
         }
     }
 
-
     @OptIn(InternalAPI::class)
     suspend fun processGenres() = withContext(Dispatchers.IO) {
         val books = db.listAll()
         val genreList = db.getGenres().joinToString(", ") { it.name }
 
-        books.reversed().take(3).filter { it.title != null }.chunked(50).forEach { batch ->
-            batch.forEach { book ->
+        books
+            .reversed()
+            .filter { !it.title.isNullOrEmpty() && it.genreId == null }
+            .forEach { book ->
                 runCatching {
                     val author = book.author ?: "unknown author"
                     val title = book.title ?: "unknown title"
@@ -169,7 +170,7 @@ class BookService(
                         putJsonArray("messages") {
                             addJsonObject {
                                 put("role", "system")
-                                put("content", "You are a helpful assistant designed to output JSON. Provide the genre of the book in CSV format from the following list: $genreList.")
+                                put("content", "You are a helpful assistant designed to output JSON. Provide the genre of the book from the following list: $genreList. Do not respond with anything besides the genre always respond with only one genre.")
                             }
                             addJsonObject {
                                 put("role", "user")
@@ -186,16 +187,15 @@ class BookService(
                     println("\n\nReceived response: $responseBody\n\n")
                     val json = Json { ignoreUnknownKeys = true }
                     val openAIResponse: OpenAIResponse = json.decodeFromString(responseBody)
-                    println("\n\n openAIResponse: $openAIResponse\n\n")
-                    // val messageContent = openAIResponse.choices.first().message.content
-                    // val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
+                    val messageContent = openAIResponse.choices.first().message.content
+                    val winnerResponse: GenreResponse = Json.decodeFromString(messageContent)
+                    println("\n\n winnerResponse: $winnerResponse\n\n")
 
-                    // processGenreResponse(book, winnerResponse)
+                    processGenreResponse(book, winnerResponse)
                 }.onFailure {
                     println("Error processing book: ${it.message}")
                 }
             }
-        }
     }
 
     private suspend fun processGenreResponse(book: Book, winnerResponse: GenreResponse) {
@@ -205,6 +205,7 @@ class BookService(
                 val genre = db.getGenres().first { it.name == winnerResponse.genre }
                 db.setGenreId(book.id, genre.id)
             } else {
+                // TODO: add genre to db
                 println("Received genre is not in the list: ${winnerResponse.genre}")
             }
         } else {
