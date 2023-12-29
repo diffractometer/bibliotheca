@@ -25,8 +25,8 @@ WITH GenreOrder AS (
              BGO.genre_id,
              BGO.genre_order,
              BGO.book_order_within_genre,
-             CEILING((CAST(ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) AS DECIMAL)) / 8) AS cell,
-             (ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) - 1) % 8 + 1 AS position
+             CEILING((CAST(ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) AS DECIMAL)) / 16) AS cell,
+             (ROW_NUMBER() OVER (ORDER BY BGO.genre_order, BGO.author, BGO.title) - 1) % 16+ 1 AS position
          FROM BooksWithGenreOrder BGO
      )
 SELECT

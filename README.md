@@ -71,3 +71,7 @@ At this point, you will have set up the database schema for `Genres` and `Books`
 - **Packing/Unpacking**: Generate lists using cell numbers.
 - **Extras**: Implement barcode scanning and cloud sync.
 ```
+
+## OpenAi thread
+
+https://chat.openai.com/c/bdda76a2-c7d4-4ba7-afdc-214f70cf8d88
