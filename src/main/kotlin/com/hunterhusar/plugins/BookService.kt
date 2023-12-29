@@ -243,7 +243,9 @@ class BookService(
         }
     }
 
-    suspend fun getBooks(genreIds: List<Int>? = null): List<BookWebResponse> = withContext(Dispatchers.IO) {
+    suspend fun getBooks(
+        genreIds: List<Int>? = null
+    ): List<BookWebResponse> = withContext(Dispatchers.IO) {
         val books = db.listAll(genreIds)
         val genres = db.getGenres().associateBy { it.id }
         return@withContext books.map { book ->
