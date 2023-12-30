@@ -16,6 +16,7 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import truncate
 import java.util.*
+import kotlin.math.ceil
 
 class BookService(
     private val db: BookRepository,
@@ -244,11 +245,16 @@ class BookService(
     }
 
     suspend fun getBooks(
-        genreIds: List<Int>? = null
-    ): List<BookWebResponse> = withContext(Dispatchers.IO) {
-        val books = db.listAll(genreIds)
+        genreIds: List<Int>? = null,
+        pageSize: Int? = 10,
+        offset: Int? = 0
+    ): BookTableResponse = withContext(Dispatchers.IO) {
+        val books = db.listAll(genreIds, pageSize, offset)
         val genres = db.getGenres().associateBy { it.id }
-        return@withContext books.map { book ->
+        val totalBooks = db.countAllBooks(genreIds)
+        val totalPages = if (pageSize != null) ceil(totalBooks.toDouble() / pageSize).toInt() else 0
+
+        val bookWebResponse = books.map { book ->
 
             // Handling the URL by splitting and then reconstructing with 'small' directory
             val parts = book.coverImageS3Url?.split("/")
@@ -274,6 +280,12 @@ class BookService(
                 status = if (book.verified) "Verified" else ""
             )
         }
+
+        return@withContext BookTableResponse(
+            bookWebResponse = bookWebResponse,
+            page = 0,
+            totalPages = totalPages
+        )
     }
 
     suspend fun listAll() = withContext(Dispatchers.IO) {

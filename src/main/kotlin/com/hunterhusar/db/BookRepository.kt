@@ -126,22 +126,51 @@ class BookRepository(private val connection: Connection) {
         }
     }
 
+    suspend fun countAllBooks(genreIds: List<Int>? = null): Int = withContext(Dispatchers.IO) {
+        val baseQuery = StringBuilder("SELECT COUNT(*) as total FROM Books")
+        if (!genreIds.isNullOrEmpty()) {
+            val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
+            baseQuery.append(" WHERE genre_id IN $genresPlaceholder")
+        }
+        val statement = connection.prepareStatement(baseQuery.toString())
+        val resultSet = statement.executeQuery()
+        if (resultSet.next()) {
+            resultSet.getInt("total")
+        } else {
+            0
+        }
+    }
+
     suspend fun listAll(
-        genreIds: List<Int>? = null
+        genreIds: List<Int>? = null,
+        pageSize: Int? = null, // Nullable to handle cases where no pagination is needed
+        offset: Int? = null    // Nullable for the same reason
     ): List<Book> = withContext(Dispatchers.IO) {
-        val query: String = when {
-            genreIds.isNullOrEmpty() -> "SELECT * FROM books ORDER BY title ASC;"
-            else -> {
-                val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
-                "SELECT * FROM books WHERE genre_id IN $genresPlaceholder ORDER BY title ASC;"
-            }
+        // Start building the query
+        val baseQuery = StringBuilder("SELECT * FROM books")
+
+        // Add WHERE clause if filtering by genreIds
+        if (!genreIds.isNullOrEmpty()) {
+            val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
+            baseQuery.append(" WHERE genre_id IN $genresPlaceholder")
         }
 
-        val statement = connection.prepareStatement(query)
+        // Add ORDER BY clause
+        baseQuery.append(" ORDER BY title ASC")
 
+        // Add pagination with LIMIT and OFFSET if they're provided
+        if (pageSize != null && offset != null) {
+            baseQuery.append(" LIMIT $pageSize OFFSET $offset")
+        }
+
+        // Prepare the statement
+        val statement = connection.prepareStatement(baseQuery.toString())
+
+        // Execute the query and build the list of books
         val resultSet = statement.executeQuery()
-        generateSequence {
-            if (resultSet.next()) {
+        val books = mutableListOf<Book>()
+        while (resultSet.next()) {
+            books.add(
                 Book(
                     id = resultSet.getString("id"),
                     title = resultSet.getString("title"),
@@ -154,9 +183,11 @@ class BookRepository(private val connection: Connection) {
                     createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
                     updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
                 )
-            } else null
-        }.toList()
+            )
+        }
+        books
     }
+
 
     suspend fun getGenres(): List<Genre> = withContext(Dispatchers.IO) {
         val genresWithCount = mutableListOf<Genre>()

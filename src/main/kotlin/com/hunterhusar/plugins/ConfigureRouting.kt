@@ -28,7 +28,11 @@ fun Application.configureRouting(
         get("/bibliotheca") {
             val genreIdsParam = call.request.queryParameters["genreIds"]
             val genreIds = genreIdsParam?.split(",")?.mapNotNull { it.toIntOrNull() }
-            val books = bookService.getBooks(genreIds)
+
+            val pageSizeParam = call.request.queryParameters["pageSize"]?.toIntOrNull()
+            val offsetParam = call.request.queryParameters["offset"]?.toIntOrNull()
+
+            val books = bookService.getBooks(genreIds, pageSizeParam, offsetParam)
             call.respond(HttpStatusCode.OK, books)
         }
         post("/bibliotheca/processGenres") {

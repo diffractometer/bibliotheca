@@ -25,6 +25,13 @@ data class Book(
 )
 
 @Serializable
+data class BookTableResponse(
+    val bookWebResponse: List<BookWebResponse>,
+    val page: Int,
+    val totalPages: Int,
+)
+
+@Serializable
 data class BookWebResponse(
     val id: String,
     val title: String?,
