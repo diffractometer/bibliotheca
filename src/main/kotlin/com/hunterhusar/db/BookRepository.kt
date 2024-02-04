@@ -1,9 +1,6 @@
 package com.hunterhusar.db
 
-import com.hunterhusar.models.Book
-import com.hunterhusar.models.Genre
-import com.hunterhusar.models.ManifestItem
-import com.hunterhusar.models.ProtoBook
+import com.hunterhusar.models.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
@@ -143,47 +140,107 @@ class BookRepository(private val connection: Connection) {
 
     suspend fun listAll(
         genreIds: List<Int>? = null,
-        pageSize: Int? = null, // Nullable to handle cases where no pagination is needed
-        offset: Int? = null    // Nullable for the same reason
+        pageSize: Int? = null,
+        offset: Int? = null,
+        sortBy: SortBy? = SortBy("title", "ASC"),
+        cellWidth: Int = 16 // Default cell width for "books" per cell
     ): List<Book> = withContext(Dispatchers.IO) {
-        // Start building the query
-        val baseQuery = StringBuilder("SELECT * FROM books")
-
-        // Add WHERE clause if filtering by genreIds
-        if (!genreIds.isNullOrEmpty()) {
-            val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
-            baseQuery.append(" WHERE genre_id IN $genresPlaceholder")
-        }
-
-        // Add ORDER BY clause
-        baseQuery.append(" ORDER BY title ASC")
-
-        // Add pagination with LIMIT and OFFSET if they're provided
-        if (pageSize != null && offset != null) {
-            baseQuery.append(" LIMIT $pageSize OFFSET $offset")
-        }
-
-        // Prepare the statement
-        val statement = connection.prepareStatement(baseQuery.toString())
-
-        // Execute the query and build the list of books
-        val resultSet = statement.executeQuery()
         val books = mutableListOf<Book>()
-        while (resultSet.next()) {
-            books.add(
-                Book(
-                    id = resultSet.getString("id"),
-                    title = resultSet.getString("title"),
-                    author = resultSet.getString("author"),
-                    genreId = resultSet.getInt("genre_id").takeIf { it != 0 },
-                    cell = resultSet.getInt("cell"),
-                    position = resultSet.getInt("position"),
-                    verified = resultSet.getBoolean("verified"),
-                    coverImageS3Url = resultSet.getString("cover_image_s3_url"),
-                    createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
-                    updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
-                )
+
+        if (!genreIds.isNullOrEmpty()) {
+            // Execute the original query when genreIds are provided
+            val baseQuery = StringBuilder("SELECT * FROM books WHERE genre_id IN (${genreIds.joinToString()})")
+
+            // Add ORDER BY clause
+            baseQuery.append(
+                " ORDER BY " +
+                        "REVERSE(SPLIT_PART(REVERSE(author), ' ', 1)) ASC, " +
+                        "${sortBy?.field} ${sortBy?.direction}, " +
+                        "genre_id ASC"
             )
+
+            // Add pagination with LIMIT and OFFSET if they're provided
+            if (pageSize != null && offset != null) {
+                baseQuery.append(" LIMIT $pageSize OFFSET $offset")
+            }
+
+            // Prepare and execute the statement, then build the list of books
+            val statement = connection.prepareStatement(baseQuery.toString())
+            val resultSet = statement.executeQuery()
+            while (resultSet.next()) {
+                books.add(
+                    Book(
+                        id = resultSet.getString("id"),
+                        title = resultSet.getString("title"),
+                        author = resultSet.getString("author"),
+                        genreId = resultSet.getInt("genre_id").takeIf { it != 0 },
+                        // Ignoring cell and position fields as they are not relevant for this query
+                        cell = null,
+                        position = null,
+                        verified = resultSet.getBoolean("verified"),
+                        coverImageS3Url = resultSet.getString("cover_image_s3_url"),
+                        createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
+                        updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
+                    )
+                )
+            }
+        } else {
+            val baseQuery = StringBuilder("""
+                WITH OrderedBooks AS (
+                    SELECT *,
+                           ROW_NUMBER() OVER (ORDER BY 
+                               genre_id ASC,
+                               REVERSE(SPLIT_PART(REVERSE(author), ' ', 1)) ASC,
+                               ${sortBy?.field} ${sortBy?.direction}
+                           ) AS rn
+                    FROM books
+                )
+                SELECT id,
+                       title,
+                       author,
+                       genre_id,
+                       verified,
+                       cover_image_s3_url,
+                       created_at,
+                       updated_at,
+                       CEILING(rn / CAST($cellWidth AS DECIMAL)) AS cell,
+                       (rn - 1) % $cellWidth + 1 AS position
+                FROM OrderedBooks
+            """)
+
+            // Add WHERE clause if filtering by genreIds
+            if (!genreIds.isNullOrEmpty()) {
+                val genresPlaceholder = genreIds.joinToString(separator = ",", prefix = "(", postfix = ")")
+                baseQuery.append(" WHERE genre_id IN $genresPlaceholder")
+            }
+
+            // Add ORDER BY clause
+            // No need to add an ORDER BY clause here because it's already specified in OrderedBooks CTE.
+
+            // Add pagination with LIMIT and OFFSET if they're provided
+            if (pageSize != null && offset != null) {
+                baseQuery.append(" LIMIT $pageSize OFFSET $offset")
+            }
+
+            // Prepare and execute the statement, then build the list of books
+            val statement = connection.prepareStatement(baseQuery.toString())
+            val resultSet = statement.executeQuery()
+            while (resultSet.next()) {
+                books.add(
+                    Book(
+                        id = resultSet.getString("id"),
+                        title = resultSet.getString("title"),
+                        author = resultSet.getString("author"),
+                        genreId = resultSet.getInt("genre_id").takeIf { it != 0 },
+                        cell = resultSet.getInt("cell"),
+                        position = resultSet.getInt("position"),
+                        verified = resultSet.getBoolean("verified"),
+                        coverImageS3Url = resultSet.getString("cover_image_s3_url"),
+                        createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
+                        updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
+                    )
+                )
+            }
         }
         books
     }
@@ -210,7 +267,6 @@ class BookRepository(private val connection: Connection) {
         }
         genresWithCount
     }
-
 
     suspend fun setGenreId(bookId: String, genreId: Int) = withContext(Dispatchers.IO) {
         runCatching {
