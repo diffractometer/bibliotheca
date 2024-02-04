@@ -1,0 +1,2 @@
+ALTER TABLE Books DROP CONSTRAINT chk_cell;
+ALTER TABLE Books DROP CONSTRAINT chk_position;

@@ -138,6 +138,35 @@ class BookRepository(private val connection: Connection) {
         }
     }
 
+    suspend fun buildBookQuery(
+        cellWidth: Int,
+        sortBy: SortBy? = SortBy("title", "ASC"),
+    ) = withContext(Dispatchers.IO) {
+        val baseQuery = StringBuilder("""
+                WITH OrderedBooks AS (
+                    SELECT *,
+                           ROW_NUMBER() OVER (ORDER BY 
+                               genre_id ASC,
+                               REVERSE(SPLIT_PART(REVERSE(author), ' ', 1)) ASC,
+                               ${sortBy?.field} ${sortBy?.direction}
+                           ) AS rn
+                    FROM books
+                )
+                SELECT id,
+                       title,
+                       author,
+                       genre_id,
+                       verified,
+                       cover_image_s3_url,
+                       created_at,
+                       updated_at,
+                       CEILING(rn / CAST($cellWidth AS DECIMAL)) AS cell,
+                       (rn - 1) % $cellWidth + 1 AS position
+                FROM OrderedBooks
+            """)
+        baseQuery
+    }
+
     suspend fun listAll(
         genreIds: List<Int>? = null,
         pageSize: Int? = null,
@@ -174,9 +203,8 @@ class BookRepository(private val connection: Connection) {
                         title = resultSet.getString("title"),
                         author = resultSet.getString("author"),
                         genreId = resultSet.getInt("genre_id").takeIf { it != 0 },
-                        // Ignoring cell and position fields as they are not relevant for this query
-                        cell = null,
-                        position = null,
+                        cell = resultSet.getInt("cell"),
+                        position = resultSet.getInt("position"),
                         verified = resultSet.getBoolean("verified"),
                         coverImageS3Url = resultSet.getString("cover_image_s3_url"),
                         createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
@@ -185,28 +213,7 @@ class BookRepository(private val connection: Connection) {
                 )
             }
         } else {
-            val baseQuery = StringBuilder("""
-                WITH OrderedBooks AS (
-                    SELECT *,
-                           ROW_NUMBER() OVER (ORDER BY 
-                               genre_id ASC,
-                               REVERSE(SPLIT_PART(REVERSE(author), ' ', 1)) ASC,
-                               ${sortBy?.field} ${sortBy?.direction}
-                           ) AS rn
-                    FROM books
-                )
-                SELECT id,
-                       title,
-                       author,
-                       genre_id,
-                       verified,
-                       cover_image_s3_url,
-                       created_at,
-                       updated_at,
-                       CEILING(rn / CAST($cellWidth AS DECIMAL)) AS cell,
-                       (rn - 1) % $cellWidth + 1 AS position
-                FROM OrderedBooks
-            """)
+            val baseQuery = buildBookQuery(cellWidth, sortBy)
 
             // Add WHERE clause if filtering by genreIds
             if (!genreIds.isNullOrEmpty()) {
@@ -223,8 +230,9 @@ class BookRepository(private val connection: Connection) {
             }
 
             // Prepare and execute the statement, then build the list of books
-            val statement = connection.prepareStatement(baseQuery.toString())
-            val resultSet = statement.executeQuery()
+            val selectStatement = connection.prepareStatement(baseQuery.toString())
+            val resultSet = selectStatement.executeQuery()
+
             while (resultSet.next()) {
                 books.add(
                     Book(
@@ -238,8 +246,23 @@ class BookRepository(private val connection: Connection) {
                         coverImageS3Url = resultSet.getString("cover_image_s3_url"),
                         createdAt = resultSet.getTimestamp("created_at").toLocalDateTime(),
                         updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime()
-                    )
+                    ).also {
+                        val id = it.id
+                        val cell = it.cell ?: 0
+                        val position = resultSet.getInt("position")
+                        // val updateQuery = "UPDATE Books SET cell = ?, position = ? WHERE id = ?;"
+                        val updateQuery = "UPDATE Books SET cell = ?, position = ? WHERE id = CAST(? AS UUID);"
+                        val updateStatement = connection.prepareStatement(updateQuery).apply {
+                            setInt(1, cell)
+                            setInt(2, position)
+                            setString(3, UUID.fromString(id).toString())
+                        }
+                        updateStatement.executeUpdate()
+                        updateStatement.close()
+                    }
                 )
+
+                // selectStatement.close()
             }
         }
         books

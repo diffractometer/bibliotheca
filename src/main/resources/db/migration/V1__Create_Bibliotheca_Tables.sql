@@ -30,5 +30,5 @@ CREATE TABLE ProcessedImages
     processed_at TIMESTAMP NOT NULL DEFAULT NOW()             -- Timestamp of when the image was processed
 );
 
-ALTER TABLE Books ADD CONSTRAINT chk_cell CHECK (cell BETWEEN 1 AND 40); -- Adjust for number of shelves
-ALTER TABLE Books ADD CONSTRAINT chk_position CHECK (position BETWEEN 1 AND 8); -- Adjust for shelf size
+-- ALTER TABLE Books ADD CONSTRAINT chk_cell CHECK (cell BETWEEN 1 AND 40); -- Adjust for number of shelves
+-- ALTER TABLE Books ADD CONSTRAINT chk_position CHECK (position BETWEEN 1 AND 8); -- Adjust for shelf size
